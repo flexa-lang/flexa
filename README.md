@@ -33,7 +33,7 @@ You should see the output:
 Hello, World!
 ```
 
-For more detailed information and examples, check out the [documentation](https://flexa-script.github.io/).
+For more detailed information and examples, check out the [documentation](https://flexascript.github.io/).
 
 ## Contributing
 
