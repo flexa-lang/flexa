@@ -1,4 +1,4 @@
-# Flexa Interpreter
+# The FlexaScript interpreter
 Flexa is a toy programming language developed for fun.
 
 ## Features
