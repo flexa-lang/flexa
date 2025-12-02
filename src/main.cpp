@@ -31,12 +31,6 @@ int main(int argc, const char* argv[]) {
 		throw std::runtime_error("workspace must be informed");
 	}
 
-	if (args.debug) {
-#ifndef __FLX_DEBUG__
-#define __FLX_DEBUG__
-#endif // !__FLX_DEBUG__
-	}
-
 	if (args.workspace_path.empty()) {
 		return FlexaRepl::execute(args);
 	}
