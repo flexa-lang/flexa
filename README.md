@@ -1,4 +1,4 @@
-# The FlexaScript interpreter
+# The Flexa Interpreter
 Flexa is a toy programming language developed for fun.
 
 ## Features
@@ -33,11 +33,11 @@ You should see the output:
 Hello, World!
 ```
 
-For more detailed information and examples, check out the [documentation](https://flexascript.github.io/).
+For more detailed information and examples, check out the [documentation](https://flexa-lang.github.io/).
 
 ## Contributing
 
-Flexa is an open-source project, and we welcome contributions from the community. Whether you want to report a bug, suggest a feature, or submit code, your help is appreciated. Check out the [Contributing Guide](https://flexascript.github.io/docs/contributing.md) to learn how to get involved.
+Flexa is an open-source project, and we welcome contributions from the community. Whether you want to report a bug, suggest a feature, or submit code, your help is appreciated. Check out the [Contributing Guide](https://flexa-lang.github.io/docs/contributing.md) to learn how to get involved.
 
 ## License
 
