@@ -101,7 +101,7 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTIncludeNamespaceNode> astnode) {
 		program_nmspaces[prg_name].push_back(astnode->name_space);
 	}
 	else {
-		throw std::runtime_error("namespace '" + astnode->name_space + "' is not included in '" + prg_name + "'");
+		throw std::runtime_error("namespace '" + astnode->name_space + "' already included in '" + prg_name + "'");
 	}
 }
 
