@@ -277,7 +277,8 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTAssignmentNode> astnode) {
 		throw std::runtime_error("'" + identifier + "' constant being reassigned");
 	}
 
-	if (decl_var_expression->dim.size() < declared_variable->dim.size() && decl_var_expression->dim.size() == 1) {
+	// if it is a automatic initialization, the variable receives the array dimension for type checking
+	if (decl_var_expression->dim.size() < declared_variable->dim.size() && decl_var_expression->dim.size() == 1 && decl_var_expression->dim[0] == 1) {
 		decl_var_expression->dim = declared_variable->dim;
 	}
 
@@ -291,8 +292,7 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTAssignmentNode> astnode) {
 		curr_expr = *declared_variable;
 	}
 
-	assignment_expr = SemanticValue(do_operation(astnode->op, *declared_variable, curr_expr,
-		assignment_expr, false), 0, false, astnode->row, astnode->col);
+	assignment_expr = SemanticValue(do_operation(astnode->op, *declared_variable, curr_expr, assignment_expr, false), 0, false, astnode->row, astnode->col);
 
 	if (declared_variable->get_value() == decl_var_expression) {
 		declared_variable->get_value()->copy_from(assignment_expr);
