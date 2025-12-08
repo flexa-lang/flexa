@@ -2255,11 +2255,11 @@ void Interpreter::build_args(const std::vector<std::string>& args) {
 	// so
 #ifdef linux
 
-	str_value["so"] = allocate_value(new RuntimeValue(flx_string("linux")));
+	str_value["os"] = allocate_value(new RuntimeValue(flx_string("linux")));
 
 #elif defined(_WIN32) || defined(WIN32)
 
-	str_value["so"] = allocate_value(new RuntimeValue(flx_string("windows")));
+	str_value["os"] = allocate_value(new RuntimeValue(flx_string("windows")));
 
 #endif // linux
 

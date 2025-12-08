@@ -190,7 +190,7 @@ void Scope::declare_flexa_struct(core::Visitor* visitor) {
 		Type::T_STRING, std::vector<std::shared_ptr<ASTExprNode>>(), nullptr, false, 0, 0));
 	variables.emplace("cwd", VariableDefinition("cwd", Type::T_STRING, "", "",
 		Type::T_UNDEFINED, std::vector<std::shared_ptr<ASTExprNode>>(), nullptr, false, 0, 0));
-	variables.emplace("so", VariableDefinition("so", Type::T_STRING, "", "",
+	variables.emplace("os", VariableDefinition("os", Type::T_STRING, "", "",
 		Type::T_UNDEFINED, std::vector<std::shared_ptr<ASTExprNode>>(), nullptr, false, 0, 0));
 	std::make_shared<ASTStructDefinitionNode>("Flexa", variables, 0, 0)->accept(visitor);
 }
