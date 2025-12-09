@@ -1,15 +1,14 @@
-### **How to use:**
-1. Debug
+### **Commands:**
 ```bash
+# debug
 mkdir build-debug && cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make
-./flexa_interpreter
-```
-2. Release
-```bash
+
+# release
 mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake -DCMAKE_BUILD_TYPE=Release .. 
+
+# compile
 make
-./flexa_interpreter
+
 ```
