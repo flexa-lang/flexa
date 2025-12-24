@@ -1,26 +1,36 @@
 #include "scope.hpp"
 
+#include "types.hpp"
 #include "utils.hpp"
 
 using namespace core;
 
-Scope::Scope(std::shared_ptr<ASTProgramNode> owner, std::string name) : owner(owner), name(name) {};
+Scope::Scope(std::string module_name_space, std::string module_name)
+	: module_name_space(module_name_space), module_name(module_name) {
+}
 
-Scope::Scope(std::shared_ptr<ASTProgramNode> owner) : owner(owner) {}
+Scope::Scope() = default;
 
 Scope::~Scope() = default;
 
-StructureDefinition Scope::find_declared_structure_definition(const std::string& identifier) {
-	return structure_symbol_table.at(identifier);
+std::shared_ptr<ClassDefinition> Scope::find_declared_class_definition(const std::string& identifier) {
+	return class_symbol_table.at(identifier);
+}
+
+std::shared_ptr<StructDefinition> Scope::find_declared_struct_definition(const std::string& identifier) {
+	return struct_symbol_table.at(identifier);
 }
 
 std::shared_ptr<Variable> Scope::find_declared_variable(const std::string& identifier) {
 	auto& var = variable_symbol_table.at(identifier);
-	var->reset_ref();
 	return var;
 }
 
-FunctionDefinition& Scope::find_declared_function(const std::string& identifier, const std::vector<TypeDefinition*>* signature, bool strict) {
+std::shared_ptr<FunctionDefinition>& Scope::find_declared_function(
+	const std::string& identifier,
+	const std::vector<std::shared_ptr<TypeDefinition>>* signature,
+	bool strict
+) {
 	auto funcs = function_symbol_table.equal_range(identifier);
 
 	if (std::distance(funcs.first, funcs.second) == 0) {
@@ -28,15 +38,15 @@ FunctionDefinition& Scope::find_declared_function(const std::string& identifier,
 	}
 
 	for (auto& it = funcs.first; it != funcs.second; ++it) {
-		if (it->second.is_var || !signature) {
+		if (!signature) {
 			return it->second;
 		}
 
-		auto& func_sig = it->second.parameters;
+		auto& func_sig = it->second->parameters;
 		bool rest = false;
 		auto found = true;
-		TypeDefinition* stype = nullptr;
-		TypeDefinition* ftype = nullptr;
+		std::shared_ptr<TypeDefinition> stype = nullptr;
+		std::shared_ptr<TypeDefinition> ftype = nullptr;
 		size_t func_sig_size = func_sig.size();
 		size_t call_sig_size = signature->size();
 
@@ -46,7 +56,7 @@ FunctionDefinition& Scope::find_declared_function(const std::string& identifier,
 				ftype = func_sig.at(i);
 				stype = signature->at(i);
 
-				if (!TypeDefinition::is_any_or_match_type(*ftype, *stype, strict || stype->use_ref)) {
+				if (!ftype->is_any_or_match_type_def(*stype, strict)) {
 					found = false;
 					break;
 				}
@@ -64,12 +74,12 @@ FunctionDefinition& Scope::find_declared_function(const std::string& identifier,
 				if (!rest) {
 					ftype = func_sig.at(i);
 
-					auto parameter = dynamic_cast<VariableDefinition*>(it->second.parameters[i]);
+					auto parameter = std::dynamic_pointer_cast<VariableDefinition>(it->second->parameters[i]);
 
 					if (parameter && parameter->is_rest) {
 						rest = true;
-						if (TypeUtils::is_array(ftype->type)) {
-							ftype = new TypeDefinition(ftype->array_type, Type::T_UNDEFINED, std::vector<std::shared_ptr<ASTExprNode>>(), ftype->type_name, ftype->type_name_space);
+						if (ftype->is_array()) {
+							ftype = std::make_shared<TypeDefinition>(ftype->type, ftype->type_name_space, ftype->type_name);
 						}
 					}
 
@@ -80,7 +90,7 @@ FunctionDefinition& Scope::find_declared_function(const std::string& identifier,
 				}
 				stype = signature->at(i);
 
-				if (!TypeDefinition::is_any_or_match_type(*ftype, *stype, strict || stype->use_ref)) {
+				if (!ftype->is_any_or_match_type_def(*stype, strict)) {
 					found = false;
 					break;
 				}
@@ -99,15 +109,17 @@ FunctionDefinition& Scope::find_declared_function(const std::string& identifier,
 					ftype = func_sig.at(i);
 					stype = signature->at(i);
 
-					if (!TypeDefinition::is_any_or_match_type(*ftype, *stype, strict || stype->use_ref)) {
+					if (!ftype->is_any_or_match_type_def(*stype, strict)) {
 						found = false;
 						break;
 					}
 				}
 				else {
-					auto parameter = dynamic_cast<VariableDefinition*>(it->second.parameters[i]);
+					auto parameter = std::dynamic_pointer_cast<VariableDefinition>(it->second->parameters[i]);
 
-					if (parameter && !parameter->default_value) {
+					if (parameter &&
+						(parameter->has_expr_default() && !parameter->get_expr_default()
+							|| parameter->has_pc_default() && !parameter->get_pc_default())) {
 						found = false;
 						break;
 					}
@@ -124,25 +136,23 @@ FunctionDefinition& Scope::find_declared_function(const std::string& identifier,
 	throw std::runtime_error("something went wrong when determining the type of '" + identifier + "' function");
 }
 
-std::pair<std::unordered_multimap<std::string, FunctionDefinition>::iterator,
-	std::unordered_multimap<std::string, FunctionDefinition>::iterator>
-	Scope::find_declared_functions(const std::string& identifier) {
-	auto funcs = function_symbol_table.equal_range(identifier);
-	if (std::distance(funcs.first, funcs.second) == 0) {
-		throw std::runtime_error("definition of '" + identifier + "' function signature not found");
-	}
-	return funcs;
+bool Scope::already_declared_class_definition(const std::string& identifier) {
+	return class_symbol_table.find(identifier) != class_symbol_table.end();
 }
 
-bool Scope::already_declared_structure_definition(const std::string& identifier) {
-	return structure_symbol_table.find(identifier) != structure_symbol_table.end();
+bool Scope::already_declared_struct_definition(const std::string& identifier) {
+	return struct_symbol_table.find(identifier) != struct_symbol_table.end();
 }
 
 bool Scope::already_declared_variable(const std::string& identifier) {
 	return variable_symbol_table.find(identifier) != variable_symbol_table.end();
 }
 
-bool Scope::already_declared_function(const std::string& identifier, const std::vector<TypeDefinition*>* signature, bool strict) {
+bool Scope::already_declared_function(
+	const std::string& identifier,
+	const std::vector<std::shared_ptr<TypeDefinition>>* signature,
+	bool strict
+) {
 	try {
 		find_declared_function(identifier, signature, strict);
 		return true;
@@ -152,45 +162,22 @@ bool Scope::already_declared_function(const std::string& identifier, const std::
 	}
 }
 
-bool Scope::already_declared_function_name(const std::string& identifier) {
-	try {
-		find_declared_functions(identifier);
-		return true;
-	}
-	catch (...) {
-		return false;
-	}
-}
-
-
 size_t Scope::total_declared_variables() {
 	return variable_symbol_table.size();
 }
 
-void Scope::declare_structure_definition(StructureDefinition structure) {
-	structure_symbol_table[structure.identifier] = structure;
+void Scope::declare_class_definition(std::shared_ptr<ClassDefinition> structure) {
+	class_symbol_table[structure->identifier] = structure;
+}
+
+void Scope::declare_struct_definition(std::shared_ptr<StructDefinition> structure) {
+	struct_symbol_table[structure->identifier] = structure;
 }
 
 void Scope::declare_variable(const std::string& identifier, const std::shared_ptr<Variable>& variable) {
 	variable_symbol_table[identifier] = variable;
 }
 
-void Scope::declare_function(const std::string& identifier, FunctionDefinition function) {
+void Scope::declare_function(const std::string& identifier, std::shared_ptr<FunctionDefinition> function) {
 	function_symbol_table.insert(std::make_pair(identifier, function));
-}
-
-void Scope::declare_flexa_struct(core::Visitor* visitor) {
-	if (declared_flexa_struct) {
-		return;
-	}
-	declared_flexa_struct = true;
-
-	std::map<std::string, VariableDefinition> variables;
-	variables.emplace("args", VariableDefinition("args", Type::T_ARRAY, "", "",
-		Type::T_STRING, std::vector<std::shared_ptr<ASTExprNode>>(), nullptr, false, 0, 0));
-	variables.emplace("cwd", VariableDefinition("cwd", Type::T_STRING, "", "",
-		Type::T_UNDEFINED, std::vector<std::shared_ptr<ASTExprNode>>(), nullptr, false, 0, 0));
-	variables.emplace("os", VariableDefinition("os", Type::T_STRING, "", "",
-		Type::T_UNDEFINED, std::vector<std::shared_ptr<ASTExprNode>>(), nullptr, false, 0, 0));
-	std::make_shared<ASTStructDefinitionNode>("Flexa", variables, 0, 0)->accept(visitor);
 }

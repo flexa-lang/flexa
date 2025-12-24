@@ -54,7 +54,6 @@ FlexaCliArgs::FlexaCliArgs(int argc, const char* argv[]) {
 
 void FlexaCliArgs::parse_args() {
 	auto args_size = args.size();
-	engine = "ast";
 
 	size_t i = 0;
 
@@ -66,16 +65,6 @@ void FlexaCliArgs::parse_args() {
 		if (arg == "-d" || arg == "--debug") {
 			debug = true;
 
-			continue;
-		}
-		if (arg == "-e" || arg == "--engine") {
-			++i;
-			throw_if_not_parameter(args_size, i, arg);
-			std::string p = args[i];
-			if (p != "ast" && p != "vm") {
-				throw std::runtime_error("invalid " + arg + " parameter value: '" + p + "'");
-			}
-			engine = args[i];
 			continue;
 		}
 		if (arg == "-w" || arg == "--workspace") {
@@ -103,11 +92,16 @@ void FlexaCliArgs::parse_args() {
 			continue;
 		}
 		--i;
+
+		if (arg.starts_with("-") || arg.starts_with("--")) {
+			throw std::runtime_error("unknown parameter " + arg);
+		}
+
 		// no more optional parameters
 		break;
 	}
 
-	// check if the first
+	// check if is the first
 	auto ni = i + 1;
 	if (ni < args_size && std::filesystem::is_regular_file(args[ni]) && workspace_path.empty()) {
 		std::filesystem::path full_path(args[ni]);

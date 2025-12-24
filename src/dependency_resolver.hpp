@@ -20,19 +20,20 @@ namespace core {
 			std::vector<std::string> libs;
 
 		public:
-			DependencyResolver(std::shared_ptr<ASTProgramNode> main_program, const std::map<std::string, std::shared_ptr<ASTProgramNode>>& programs);
+			DependencyResolver(
+				std::shared_ptr<ASTModuleNode> main_module,
+				const std::map<std::string, std::shared_ptr<ASTModuleNode>>& modules
+			);
 
 			void start();
 
 		private:
-			void visit(std::shared_ptr<ASTProgramNode>) override;
+			void visit(std::shared_ptr<ASTModuleNode>) override;
 			void visit(std::shared_ptr<ASTUsingNode>) override;
 			void visit(std::shared_ptr<ASTIncludeNamespaceNode>) override;
 			void visit(std::shared_ptr<ASTExcludeNamespaceNode>) override;
 			void visit(std::shared_ptr<ASTDeclarationNode>) override;
 			void visit(std::shared_ptr<ASTUnpackedDeclarationNode>) override;
-			void visit(std::shared_ptr<ASTAssignmentNode>) override;
-			void visit(std::shared_ptr<ASTFunctionExpressionAssignmentNode>) override;
 			void visit(std::shared_ptr<ASTReturnNode>) override;
 			void visit(std::shared_ptr<ASTExitNode>) override;
 			void visit(std::shared_ptr<ASTBlockNode>) override;
@@ -56,14 +57,13 @@ namespace core {
 			void visit(std::shared_ptr<ASTLiteralNode<flx_float>>) override;
 			void visit(std::shared_ptr<ASTLiteralNode<flx_char>>) override;
 			void visit(std::shared_ptr<ASTLiteralNode<flx_string>>) override;
-			void visit(std::shared_ptr<ASTLambdaFunction>) override;
+			void visit(std::shared_ptr<ASTLambdaFunctionNode>) override;
 			void visit(std::shared_ptr<ASTArrayConstructorNode>) override;
 			void visit(std::shared_ptr<ASTStructConstructorNode>) override;
 			void visit(std::shared_ptr<ASTBinaryExprNode>) override;
 			void visit(std::shared_ptr<ASTUnaryExprNode>) override;
 			void visit(std::shared_ptr<ASTIdentifierNode>) override;
 			void visit(std::shared_ptr<ASTTernaryNode>) override;
-			void visit(std::shared_ptr<ASTInNode>) override;
 			void visit(std::shared_ptr<ASTFunctionCallNode>) override;
 			void visit(std::shared_ptr<ASTTypeCastNode>) override;
 			void visit(std::shared_ptr<ASTTypeNode>) override;
@@ -75,20 +75,10 @@ namespace core {
 			void visit(std::shared_ptr<ASTIsStructNode>) override;
 			void visit(std::shared_ptr<ASTIsArrayNode>) override;
 			void visit(std::shared_ptr<ASTIsAnyNode>) override;
+			void visit(std::shared_ptr<ASTInstructionNode>) override;
 			void visit(std::shared_ptr<ASTValueNode>) override;
-			void visit(std::shared_ptr<ASTBuiltinCallNode>) override;
+			void visit(std::shared_ptr<ASTClassDefinitionNode>) override;
 
-			intmax_t hash(std::shared_ptr<ASTExprNode>) override;
-			intmax_t hash(std::shared_ptr<ASTValueNode>) override;
-			intmax_t hash(std::shared_ptr<ASTIdentifierNode>) override;
-			intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_bool>>) override;
-			intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_int>>) override;
-			intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_float>>) override;
-			intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_char>>) override;
-			intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_string>>) override;
-
-			void set_curr_pos(size_t row, size_t col) override;
-			std::string msg_header() override;
 		};
 
 	}

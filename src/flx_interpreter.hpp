@@ -6,8 +6,8 @@
 #include <map>
 #include <memory>
 
+#include "ast.hpp"
 #include "flx_utils.hpp"
-#include "semantic_analysis.hpp"
 
 namespace interpreter {
 
@@ -23,11 +23,14 @@ namespace interpreter {
 		int execute();
 
 	private:
-		FlexaSource load_program(const std::string& source);
-		std::vector<FlexaSource> load_programs(const std::vector<std::string>& source_files);
+		FlexaSource load_module(const std::string& source);
+		std::vector<FlexaSource> load_modules(const std::vector<std::string>& source_files);
 
-		void parse_programs(const std::vector<FlexaSource>& source_programs, std::shared_ptr<core::ASTProgramNode>* main_program,
-			std::map<std::string, std::shared_ptr<core::ASTProgramNode>>* programs);
+		void parse_modules(
+			const std::vector<FlexaSource>& source_modules,
+			std::shared_ptr<core::ASTModuleNode>* main_module,
+			std::map<std::string, std::shared_ptr<core::ASTModuleNode>>* modules
+		);
 
 		int interpreter();
 

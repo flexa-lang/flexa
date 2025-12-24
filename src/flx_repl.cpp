@@ -2,6 +2,9 @@
 
 #include <filesystem>
 
+#include "lexer.hpp"
+#include "parser.hpp"
+#include "semantic_analysis.hpp"
 #include "utils.hpp"
 #include "types.hpp"
 #include "constants.hpp"
@@ -35,8 +38,8 @@ int FlexaRepl::execute(const FlexaCliArgs& args) {
 	std::cout << Constants::NAME << " " << Constants::VER << " [" << Constants::YEAR << "]" << std::endl;
 	std::cout << "Type \"#help\" for more information." << std::endl;
 
-	std::shared_ptr<Scope> semantic_global_scope = std::make_shared<Scope>(nullptr);
-	std::shared_ptr<Scope> interpreter_global_scope = std::make_shared<Scope>(nullptr);
+	//std::shared_ptr<Scope> semantic_global_scope = std::make_shared<Scope>(true);
+	//std::shared_ptr<Scope> interpreter_global_scope = std::make_shared<Scope>(true);
 
 	while (true) {
 		std::string input_line;
@@ -104,12 +107,12 @@ int FlexaRepl::execute(const FlexaCliArgs& args) {
 		try {
 			Lexer lexer(prog_name, source);
 			parser::Parser parser(prog_name, &lexer);
-			std::shared_ptr<ASTProgramNode> program;
-			std::map<std::string, std::shared_ptr<ASTProgramNode>> programs;
+			std::shared_ptr<ASTModuleNode> module;
+			std::map<std::string, std::shared_ptr<ASTModuleNode>> modules;
 
 			try {
-				program = parser.parse_program();
-				programs = std::map<std::string, std::shared_ptr<ASTProgramNode>>({ std::pair(prog_name, program) });
+				module = parser.parse_module();
+				modules = std::map<std::string, std::shared_ptr<ASTModuleNode>>({ std::pair(prog_name, module) });
 			}
 			catch (const std::runtime_error& e) {
 				std::string err = e.what();
@@ -118,34 +121,34 @@ int FlexaRepl::execute(const FlexaCliArgs& args) {
 				continue;
 			}
 
-			semantic_global_scope->owner = program;
-			interpreter_global_scope->owner = program;
+			//semantic_global_scope->set_owner(module);
+			//interpreter_global_scope->set_owner(module);
 
 			// check if it's all ok using a temp global scope
-			std::shared_ptr<Scope> temp = std::make_shared<Scope>(*semantic_global_scope);
-			SemanticAnalyser temp_semantic_analyser(temp, program, programs, args.program_args);
-			temp_semantic_analyser.start();
+			//std::shared_ptr<Scope> temp = std::make_shared<Scope>(*semantic_global_scope);
+			//SemanticAnalyser temp_semantic_analyser(temp, module, modules, args.program_args);
+			//temp_semantic_analyser.start();
 
-			SemanticAnalyser semantic_analyser(semantic_global_scope, program, programs, args.program_args);
-			semantic_analyser.start();
+			//SemanticAnalyser semantic_analyser(semantic_global_scope, module, modules, args.program_args);
+			//semantic_analyser.start();
 
-			Interpreter interpreter(interpreter_global_scope, program, programs, args.program_args);
-			interpreter.visit(program);
+			//Interpreter interpreter(interpreter_global_scope, module, modules);
+			//interpreter.visit(module);
 
-			if (file_load) {
-				std::cout << std::endl << "File loaded successfully." << std::endl;
-			}
-			else {
-				// not is undefined and it's an expression
-				if (!TypeUtils::is_undefined(interpreter.current_expression_value->type)
-					&& source.find(';') == std::string::npos) {
-					std::cout << RuntimeOperations::parse_value_to_string(interpreter.current_expression_value) << std::endl;
-				}
-			}
+			//if (file_load) {
+			//	std::cout << std::endl << "File loaded successfully." << std::endl;
+			//}
+			//else {
+			//	// not is undefined and it's an expression
+			//	if (!TypeDefinition::is_undefined(interpreter.current_expression_value->type)
+			//		&& source.find(';') == std::string::npos) {
+			//		std::cout << RuntimeOperations::parse_value_to_string(interpreter.current_expression_value) << std::endl;
+			//	}
+			//}
 
-			if (interpreter.exit_from_program){
-				break;
-			}
+			//if (interpreter.exit_from_program){
+			//	break;
+			//}
 		}
 		catch (const std::runtime_error& e) {
 			std::string err = e.what();

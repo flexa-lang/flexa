@@ -9,12 +9,13 @@
 using namespace core;
 using namespace core::parser;
 
-Parser::Parser(const std::string& name, Lexer* lexer) : name(name), lexer(lexer) {
+Parser::Parser(const std::string& name, Lexer* lexer)
+	: name(name), lexer(lexer) {
 	current_token = lexer->next_token();
 	next_token = lexer->next_token();
 }
 
-std::shared_ptr<ASTProgramNode> Parser::parse_program() {
+std::shared_ptr<ASTModuleNode> Parser::parse_module() {
 	auto statements = std::vector<std::shared_ptr<ASTNode>>();
 	std::string name_space = Constants::DEFAULT_NAMESPACE;
 
@@ -26,11 +27,11 @@ std::shared_ptr<ASTProgramNode> Parser::parse_program() {
 	}
 
 	while (current_token.type != TK_EOF) {
-		statements.push_back(parse_program_statement());
+		statements.push_back(parse_module_statement());
 		consume_token();
 	}
 
-	return std::make_shared<ASTProgramNode>(name, name_space, statements);
+	return std::make_shared<ASTModuleNode>(name, name_space, statements);
 }
 
 std::shared_ptr<ASTUsingNode> Parser::parse_using_statement() {
@@ -51,7 +52,7 @@ std::shared_ptr<ASTUsingNode> Parser::parse_using_statement() {
 	return std::make_shared<ASTUsingNode>(library, row, col);
 }
 
-std::shared_ptr<ASTNode> Parser::parse_program_statement() {
+std::shared_ptr<ASTNode> Parser::parse_module_statement() {
 	switch (current_token.type) {
 	case TK_USING:
 		return parse_using_statement();
@@ -74,7 +75,10 @@ std::shared_ptr<ASTNode> Parser::parse_block_statement() {
 		return parse_enum_statement();
 	case TK_VAR:
 	case TK_CONST:
+	case TK_CONST_EXPR:
 		return parse_unpacked_declaration_statement();
+	case TK_CLASS:
+		return parse_class_definition();
 	case TK_STRUCT:
 		return parse_struct_definition();
 	case TK_TRY:
@@ -101,15 +105,8 @@ std::shared_ptr<ASTNode> Parser::parse_block_statement() {
 		return parse_exit_statement();
 	case TK_RETURN:
 		return parse_return_statement();
-	case TK_IDENTIFIER:
-		return parse_identifier_statement();
 	default:
-		try {
-			return parse_statement_expression();
-		}
-		catch (...) {
-			throw std::runtime_error(msg_header() + "expected statement or expression");
-		}
+		return parse_statement_expression();
 	}
 }
 
@@ -117,12 +114,13 @@ std::shared_ptr<ASTNode> Parser::parse_decl_or_assign_statement() {
 	switch (current_token.type) {
 	case TK_VAR:
 	case TK_CONST:
+	case TK_CONST_EXPR:
 		consume_token();
 		return parse_param_statement();
 	case TK_IDENTIFIER:
 		return parse_identifier_node();
 	default:
-		throw std::runtime_error(msg_header() + "expected declaration or variable");
+		throw std::runtime_error(build_error_message("expected declaration or variable"));
 	}
 }
 
@@ -144,7 +142,7 @@ std::shared_ptr<ASTNamespaceManagerNode> Parser::parse_namespace_manager_stateme
 	case TK_EXCLUDE:
 		return std::make_shared<ASTExcludeNamespaceNode>(name_space, row, col);
 	default:
-		throw std::runtime_error(msg_header() + "invalid token '" + Token::token_image(type) + "'");
+		throw std::runtime_error(build_error_message("invalid token '" + Token::token_image(type) + "'"));
 	}
 
 }
@@ -228,7 +226,7 @@ std::shared_ptr<ASTBlockNode> Parser::parse_block() {
 	if (current_token.type == TK_RIGHT_CURLY) {
 		return std::make_shared<ASTBlockNode>(statements, row, col);
 	}
-	throw std::runtime_error(msg_header() + "reached end of file while parsing");
+	throw std::runtime_error(build_error_message("reached end of file while parsing"));
 }
 
 std::shared_ptr<ASTBlockNode> Parser::parse_struct_block() {
@@ -247,7 +245,7 @@ std::shared_ptr<ASTBlockNode> Parser::parse_struct_block() {
 	if (current_token.type == TK_RIGHT_CURLY) {
 		return std::make_shared<ASTBlockNode>(statements, row, col);
 	}
-	throw std::runtime_error(msg_header() + "mismatched scopes: reached end of file while parsing");
+	throw std::runtime_error(build_error_message("mismatched scopes: reached end of file while parsing"));
 }
 
 std::shared_ptr<ASTStatementNode> Parser::parse_struct_block_variables() {
@@ -256,25 +254,10 @@ std::shared_ptr<ASTStatementNode> Parser::parse_struct_block_variables() {
 		return parse_declaration_statement();
 
 	default:
-		throw std::runtime_error(msg_header() + "invalid declaration starting with '" + current_token.value + "' encountered");
+		throw std::runtime_error(build_error_message("invalid declaration starting with '"
+			+ current_token.value + "' encountered"));
 	}
 }
-
-VariableDefinition* Parser::parse_struct_var_def() {
-	std::string identifier;
-	Type type = Type::T_UNDEFINED;
-	TypeDefinition type_def = Type::T_UNDEFINED;
-	std::shared_ptr<ASTExprNode> expr_size;
-	size_t row = current_token.row;
-	size_t col = current_token.col;
-
-	identifier = current_token.value;
-
-	type_def = parse_type_definition();
-
-	return new VariableDefinition(identifier, type_def.type, type_def.type_name,
-		type_def.type_name_space, type_def.array_type, type_def.expr_dim, nullptr, false, row, col);
-};
 
 std::shared_ptr<ASTContinueNode> Parser::parse_continue_statement() {
 	size_t row = current_token.row;
@@ -344,7 +327,10 @@ std::shared_ptr<ASTSwitchNode> Parser::parse_switch_statement() {
 			consume_token();
 		}
 		else {
-			while (current_token.type != TK_RIGHT_CURLY && current_token.type != TK_ERROR && current_token.type != TK_EOF) {
+			while (current_token.type != TK_RIGHT_CURLY
+				&& current_token.type != TK_ERROR
+				&& current_token.type != TK_EOF) {
+
 				consume_semicolon.push(true);
 				statements.push_back(parse_block_statement());
 				consume_semicolon.pop();
@@ -495,10 +481,11 @@ std::shared_ptr<ASTNode> Parser::parse_foreach_collection() {
 		node = parse_array_constructor_node();
 		break;
 	case TK_IDENTIFIER:
-		node = parse_identifier_statement();
+		//node = parse_identifier_statement();
+		node = parse_identifier_expression();
 		break;
 	default:
-		throw std::runtime_error(msg_header() + "expected array");
+		throw std::runtime_error(build_error_message("expected array"));
 	}
 	consume_semicolon.pop();
 
@@ -563,20 +550,6 @@ std::shared_ptr<ASTDoWhileNode> Parser::parse_do_while_statement() {
 	return std::make_shared<ASTDoWhileNode>(condition, block, row, col);
 }
 
-std::shared_ptr<ASTLambdaFunction> Parser::parse_function_expression() {
-	size_t row = current_token.row;
-	size_t col = current_token.col;
-	consume_token();
-	return std::make_shared<ASTLambdaFunction>(parse_function_definition(""), row, col);
-}
-
-std::shared_ptr<ASTFunctionDefinitionNode> Parser::parse_function_statement() {
-	consume_token(TK_IDENTIFIER);
-	std::string identifier = current_token.value;
-	consume_token(TK_LEFT_BRACKET);
-	return parse_function_definition(identifier);
-}
-
 TypeDefinition Parser::parse_type_definition(Type default_type) {
 	Type type = Type::T_UNDEFINED;
 	Type array_type = Type::T_UNDEFINED;
@@ -587,6 +560,14 @@ TypeDefinition Parser::parse_type_definition(Type default_type) {
 	if (next_token.type == TK_COLON) {
 		consume_token();
 		if (next_token.type != TK_LEFT_BRACE) {
+			if (next_token.type == TK_CLASS) {
+				type = Type::T_CLASS;
+				consume_token();
+			}
+			else if (next_token.type == TK_STRUCT) {
+				type = Type::T_STRUCT;
+				consume_token();
+			}
 			consume_token();
 
 			if (next_token.type == TK_LIB_ACESSOR_OP) {
@@ -600,21 +581,19 @@ TypeDefinition Parser::parse_type_definition(Type default_type) {
 				&& current_token.type != TK_STRING_TYPE && current_token.type != TK_IDENTIFIER
 				&& current_token.type != TK_FUNCTION_TYPE && current_token.type != TK_VOID_TYPE
 				&& current_token.type != TK_ANY_TYPE) {
-				throw std::runtime_error(msg_header() + "expected type");
+				throw std::runtime_error(build_error_message("expected type"));
 			}
 
 			if (current_token.type == TK_IDENTIFIER) {
 				type_name = current_token.value;
 			}
 
-			type = parse_type();
+			if (type == Type::T_UNDEFINED) {
+				type = parse_type();
+			}
 		}
 
 		dim_vector = parse_dimension_vector();
-		if (dim_vector.size() > 0) {
-			array_type = type;
-			type = Type::T_ARRAY;
-		}
 
 	}
 
@@ -622,15 +601,27 @@ TypeDefinition Parser::parse_type_definition(Type default_type) {
 		type = default_type;
 	}
 
-	if (type == Type::T_ARRAY && array_type == Type::T_UNDEFINED) {
-		array_type = default_type;
-	}
+	return TypeDefinition(type, dim_vector, type_name_space, type_name);
+}
 
-	return TypeDefinition(type, array_type, dim_vector, type_name, type_name_space);
+std::shared_ptr<ASTLambdaFunctionNode> Parser::parse_function_expression() {
+	size_t row = current_token.row;
+	size_t col = current_token.col;
+	consume_token();
+	return std::make_shared<ASTLambdaFunctionNode>(
+		parse_function_definition("lambda@" + utils::FlexaUUID::generate()), row, col
+	);
+}
+
+std::shared_ptr<ASTFunctionDefinitionNode> Parser::parse_function_statement() {
+	consume_token(TK_IDENTIFIER);
+	std::string identifier = current_token.value;
+	consume_token(TK_LEFT_BRACKET);
+	return parse_function_definition(identifier);
 }
 
 std::shared_ptr<ASTFunctionDefinitionNode> Parser::parse_function_definition(const std::string& identifier) {
-	std::vector<TypeDefinition*> parameters;
+	std::vector<std::shared_ptr<TypeDefinition>> parameters;
 	TypeDefinition type_def;
 	std::shared_ptr<ASTBlockNode> block = nullptr;
 	size_t row = current_token.row;
@@ -652,7 +643,7 @@ std::shared_ptr<ASTFunctionDefinitionNode> Parser::parse_function_definition(con
 
 				unpack_typedef = parse_type_definition();
 
-				parameters.push_back(new UnpackedVariableDefinition(unpack_typedef, unpack_parameters));
+				parameters.push_back(std::make_shared<UnpackedVariableDefinition>(unpack_typedef, unpack_parameters));
 			}
 			else {
 				parameters.push_back(parse_formal_param());
@@ -678,17 +669,17 @@ std::shared_ptr<ASTFunctionDefinitionNode> Parser::parse_function_definition(con
 	}
 	else {
 		if (current_token.type != TK_SEMICOLON) {
-			throw std::runtime_error(msg_header() + "expected '{' or ';'");
+			throw std::runtime_error(build_error_message("expected '{' or ';'"));
 		}
 	}
 
 	return std::make_shared<ASTFunctionDefinitionNode>(identifier, parameters, type_def.type,
-		type_def.type_name, type_def.type_name_space, type_def.array_type, type_def.dim, block, row, col);
+		type_def.type_name_space, type_def.type_name, type_def.expr_dim, block, row, col);
 }
 
 std::shared_ptr<ASTStructDefinitionNode> Parser::parse_struct_definition() {
 	std::string identifier;
-	std::map<std::string, VariableDefinition> variables;
+	std::map<std::string, std::shared_ptr<VariableDefinition>> variables;
 	size_t row = current_token.row;
 	size_t col = current_token.col;
 
@@ -697,10 +688,8 @@ std::shared_ptr<ASTStructDefinitionNode> Parser::parse_struct_definition() {
 	consume_token(TK_LEFT_CURLY);
 
 	do {
-		consume_token(TK_VAR);
-		consume_token(TK_IDENTIFIER);
 		auto struct_var_def = parse_struct_var_def();
-		variables.emplace(struct_var_def->identifier, *struct_var_def);
+		variables.emplace(struct_var_def->identifier, struct_var_def);
 		consume_token();
 
 	} while (next_token.type != TK_RIGHT_CURLY);
@@ -710,8 +699,49 @@ std::shared_ptr<ASTStructDefinitionNode> Parser::parse_struct_definition() {
 	return std::make_shared<ASTStructDefinitionNode>(identifier, variables, row, col);
 }
 
+std::shared_ptr<VariableDefinition> Parser::parse_struct_var_def() {
+	std::string identifier;
+	Type type = Type::T_UNDEFINED;
+	TypeDefinition type_def;
+	std::shared_ptr<ASTExprNode> expr_size;
+	bool is_const = false;
+	size_t row = current_token.row;
+	size_t col = current_token.col;
+
+	if (next_token.type == TK_VAR) {
+		consume_token();
+	}
+	else {
+		consume_token(TK_CONST);
+		is_const = true;
+	}
+	consume_token(TK_IDENTIFIER);
+
+	identifier = current_token.value;
+
+	type_def = parse_type_definition();
+
+	return std::make_shared<VariableDefinition>(identifier, type_def, nullptr, false, is_const);
+};
+
 std::shared_ptr<ASTExprNode> Parser::parse_expression() {
-	return parse_ternary_expression();
+	return parse_assignment_expression();
+}
+
+std::shared_ptr<ASTExprNode> Parser::parse_assignment_expression() {
+	std::shared_ptr<ASTExprNode> lhs = parse_ternary_expression();
+	size_t row = current_token.row;
+	size_t col = current_token.col;
+
+	if (next_token.type == TK_EQUALS || next_token.type == TK_ASSIGNMENT_OP) {
+		consume_token();
+		std::string current_token_value = current_token.value;
+		consume_token();
+		auto rhs = parse_ternary_expression();
+		lhs = std::make_shared<ASTBinaryExprNode>(current_token_value, lhs, rhs, row, col);
+	}
+
+	return lhs;
 }
 
 std::shared_ptr<ASTExprNode> Parser::parse_ternary_expression() {
@@ -735,19 +765,19 @@ std::shared_ptr<ASTExprNode> Parser::parse_ternary_expression() {
 }
 
 std::shared_ptr<ASTExprNode> Parser::parse_in_expression() {
-	auto expr = parse_logical_or_expression();
+	auto lhs = parse_logical_or_expression();
 	size_t row = current_token.row;
 	size_t col = current_token.col;
 
 	if (next_token.type == TK_IN) {
-		std::shared_ptr<ASTExprNode> collection;
 		consume_token();
+		std::string current_token_value = current_token.value;
 		consume_token();
-		collection = parse_logical_or_expression();
-		return std::make_shared<ASTInNode>(expr, collection, row, col);
+		auto rhs = parse_logical_or_expression();
+		return std::make_shared<ASTBinaryExprNode>(current_token_value, lhs, rhs, row, col);
 	}
 
-	return expr;
+	return lhs;
 }
 
 std::shared_ptr<ASTExprNode> Parser::parse_logical_or_expression() {
@@ -879,7 +909,7 @@ std::shared_ptr<ASTExprNode> Parser::parse_spaceship_expression() {
 }
 
 std::shared_ptr<ASTExprNode> Parser::parse_bitwise_shift_expression() {
-	std::shared_ptr<ASTExprNode> lhs = parse_simple_expression();
+	std::shared_ptr<ASTExprNode> lhs = parse_additive_expression();
 	size_t row = current_token.row;
 	size_t col = current_token.col;
 
@@ -887,15 +917,15 @@ std::shared_ptr<ASTExprNode> Parser::parse_bitwise_shift_expression() {
 		consume_token();
 		std::string current_token_value = current_token.value;
 		consume_token();
-		auto rhs = parse_simple_expression();
+		auto rhs = parse_additive_expression();
 		lhs = std::make_shared<ASTBinaryExprNode>(current_token_value, lhs, rhs, row, col);
 	}
 
 	return lhs;
 }
 
-std::shared_ptr<ASTExprNode> Parser::parse_simple_expression() {
-	std::shared_ptr<ASTExprNode> lhs = parse_term();
+std::shared_ptr<ASTExprNode> Parser::parse_additive_expression() {
+	std::shared_ptr<ASTExprNode> lhs = parse_multiplicative_expression();
 	size_t row = current_token.row;
 	size_t col = current_token.col;
 
@@ -903,14 +933,14 @@ std::shared_ptr<ASTExprNode> Parser::parse_simple_expression() {
 		consume_token();
 		std::string current_token_value = current_token.value;
 		consume_token();
-		auto rhs = parse_term();
+		auto rhs = parse_multiplicative_expression();
 		lhs = std::make_shared<ASTBinaryExprNode>(current_token_value, lhs, rhs, row, col);
 	}
 
 	return lhs;
 }
 
-std::shared_ptr<ASTExprNode> Parser::parse_term() {
+std::shared_ptr<ASTExprNode> Parser::parse_multiplicative_expression() {
 	std::shared_ptr<ASTExprNode> lhs = parse_exponentiation();
 	size_t row = current_token.row;
 	size_t col = current_token.col;
@@ -927,7 +957,7 @@ std::shared_ptr<ASTExprNode> Parser::parse_term() {
 }
 
 std::shared_ptr<ASTExprNode> Parser::parse_exponentiation() {
-	std::shared_ptr<ASTExprNode> lhs = parse_factor();
+	std::shared_ptr<ASTExprNode> lhs = parse_primary_expression();
 	size_t row = current_token.row;
 	size_t col = current_token.col;
 
@@ -935,14 +965,14 @@ std::shared_ptr<ASTExprNode> Parser::parse_exponentiation() {
 		consume_token();
 		std::string current_token_value = current_token.value;
 		consume_token();
-		auto rhs = parse_factor();
+		auto rhs = parse_primary_expression();
 		lhs = std::make_shared<ASTBinaryExprNode>(current_token_value, lhs, rhs, row, col);
 	}
 
 	return lhs;
 }
 
-std::shared_ptr<ASTExprNode> Parser::parse_factor() {
+std::shared_ptr<ASTExprNode> Parser::parse_primary_expression() {
 	size_t row = current_token.row;
 	size_t col = current_token.col;
 
@@ -985,6 +1015,7 @@ std::shared_ptr<ASTExprNode> Parser::parse_factor() {
 	case TK_IS_ANY:
 		return parse_call_operator_node();
 
+	case TK_SELF:
 	case TK_IDENTIFIER:
 		return parse_identifier_expression();
 
@@ -999,13 +1030,7 @@ std::shared_ptr<ASTExprNode> Parser::parse_factor() {
 		return sub_expr;
 	}
 
-						 // unary expression cases
-	case TK_REF:
-	case TK_UNREF: {
-		std::string current_token_value = current_token.value;
-		consume_token();
-		return std::make_shared<ASTUnaryExprNode>(current_token_value, parse_factor(), row, col);
-	}
+		// unary expression cases
 	case TK_ADDITIVE_OP:
 	case TK_NOT: {
 		std::string current_token_value = current_token.value;
@@ -1014,7 +1039,7 @@ std::shared_ptr<ASTExprNode> Parser::parse_factor() {
 	}
 
 	default:
-		throw std::runtime_error(msg_header() + "expected expression");
+		throw std::runtime_error(build_error_message("expected expression"));
 	}
 }
 
@@ -1035,41 +1060,6 @@ std::shared_ptr<ASTExprNode> Parser::parse_identifier_expression() {
 	}
 	default:
 		return identifier;
-	}
-}
-
-std::shared_ptr<ASTNode> Parser::parse_identifier_statement() {
-	std::shared_ptr<ASTIdentifierNode> identifier = parse_identifier_node();
-
-	switch (next_token.type) {
-	case TK_LEFT_BRACKET: {
-		std::shared_ptr<ASTFunctionCallNode> fun = parse_function_call_node(identifier);
-		std::string op = next_token.value;
-
-		switch (next_token.type) {
-		case TK_INCREMENT_OP:
-			op = op == "++" ? "+=" : "-=";
-
-		case TK_ADDITIVE_OP:
-		case TK_MULTIPLICATIVE_OP:
-		case TK_EQUALS:
-			return std::make_shared<ASTFunctionExpressionAssignmentNode>(fun, op, parse_function_expression_assignment_tail(), current_token.row, current_token.col);
-
-		}
-
-		check_consume_semicolon();
-		return fun;
-	}
-	case TK_INCREMENT_OP:
-		return parse_increment_expression(identifier);
-
-	case TK_ADDITIVE_OP:
-	case TK_MULTIPLICATIVE_OP:
-	case TK_EQUALS:
-		return parse_assignment_statement(identifier);
-
-	default:
-		return parse_statement_expression();
 	}
 }
 
@@ -1114,14 +1104,16 @@ std::shared_ptr<ASTFunctionCallNode> Parser::parse_function_call_tail() {
 		expression_call = parse_function_call_tail();
 	}
 
-	return std::make_shared<ASTFunctionCallNode>(name_space, identifier_vector, parameters, expression_identifier_vector, expression_call, row, col);
+	return std::make_shared<ASTFunctionCallNode>(
+		name_space, identifier_vector, parameters, expression_identifier_vector, expression_call, row, col
+	);
 }
 
 std::shared_ptr<ASTFunctionCallNode> Parser::parse_function_call_node(std::shared_ptr<ASTIdentifierNode> idnode) {
-	std::string name_space = std::move(idnode->name_space);
+	std::string name_space = std::move(idnode->access_name_space);
 	std::string identifier = idnode->identifier_vector[idnode->identifier_vector.size() - 1].identifier;
 	std::shared_ptr<ASTFunctionCallNode> function = parse_function_call_tail();
-	function->name_space = name_space;
+	function->access_name_space = name_space;
 	function->identifier = identifier;
 	function->identifier_vector = idnode->identifier_vector;
 	return function;
@@ -1185,6 +1177,20 @@ Identifier Parser::parse_identifier_accessor() {
 std::vector<Identifier> Parser::parse_identifier_vector() {
 	auto identifier_vector = std::vector<Identifier>();
 
+	if (current_token.type == TK_SELF) {
+		identifier_vector.push_back(Identifier("self"));
+		consume_token();
+		consume_token();
+	}
+
+	if (current_token.type == TK_THIS) {
+		identifier_vector.push_back(Identifier("this"));
+		if (next_token.type == TK_DOT) {
+			consume_token();
+			consume_token();
+		}
+	}
+
 	while (current_token.type == TK_IDENTIFIER) {
 		identifier_vector.push_back(parse_identifier_accessor());
 
@@ -1198,26 +1204,6 @@ std::vector<Identifier> Parser::parse_identifier_vector() {
 	}
 
 	return identifier_vector;
-}
-
-std::shared_ptr<ASTAssignmentNode> Parser::parse_assignment_statement(std::shared_ptr<ASTIdentifierNode> identifier) {
-	std::string op = std::string();
-	std::shared_ptr<ASTExprNode> expr = nullptr;
-	std::shared_ptr<ASTExprNode> expr_size = nullptr;
-	auto access_vector = std::vector<std::shared_ptr<ASTExprNode>>();
-
-	consume_token();
-	if (current_token.type != TK_ADDITIVE_OP && current_token.type != TK_MULTIPLICATIVE_OP && current_token.type != TK_EQUALS) {
-		throw std::runtime_error(msg_header() + "invalid assignment operator '" + current_token.value + "'");
-	}
-
-	op = current_token.value;
-	consume_token();
-	expr = parse_expression();
-
-	check_consume_semicolon();
-
-	return std::make_shared<ASTAssignmentNode>(identifier->identifier_vector, identifier->name_space, op, expr, identifier->row, identifier->col);
 }
 
 std::shared_ptr<ASTExprNode> Parser::parse_function_expression_assignment_tail() {
@@ -1247,6 +1233,7 @@ std::shared_ptr<ASTDeclarationNode> Parser::parse_declaration_statement() {
 	size_t row = current_token.row;
 	size_t col = current_token.col;
 	bool is_const = current_token.type == TK_CONST;
+	bool is_constexpr = current_token.type == TK_CONST_EXPR;
 
 	consume_token(TK_IDENTIFIER);
 	identifier = current_token.value;
@@ -1264,7 +1251,8 @@ std::shared_ptr<ASTDeclarationNode> Parser::parse_declaration_statement() {
 
 	check_consume_semicolon();
 
-	return std::make_shared<ASTDeclarationNode>(identifier, type_def.type, type_def.array_type, type_def.expr_dim, type_def.type_name, type_def.type_name_space, expr, is_const, row, col);
+	return std::make_shared<ASTDeclarationNode>(identifier, type_def.type, type_def.expr_dim,
+		type_def.type_name_space, type_def.type_name, expr, is_const, is_constexpr, row, col);
 }
 
 std::shared_ptr<ASTDeclarationNode> Parser::parse_param_declaration_statement() {
@@ -1278,11 +1266,12 @@ std::shared_ptr<ASTDeclarationNode> Parser::parse_param_declaration_statement() 
 
 	type_def = parse_type_definition();
 
-	return std::make_shared<ASTDeclarationNode>(identifier, type_def.type, type_def.array_type, type_def.expr_dim, type_def.type_name, type_def.type_name_space, nullptr, false, row, col);
+	return std::make_shared<ASTDeclarationNode>(identifier, type_def.type, type_def.expr_dim,
+		type_def.type_name_space, type_def.type_name, nullptr, false, false, row, col);
 }
 
 std::shared_ptr<ASTStatementNode> Parser::parse_unpacked_declaration_statement() {
-	if (current_token.type == TK_CONST || next_token.type == TK_IDENTIFIER) {
+	if (current_token.type == TK_CONST_EXPR || current_token.type == TK_CONST || next_token.type == TK_IDENTIFIER) {
 		return parse_declaration_statement();
 	}
 	else if (current_token.type == TK_VAR && next_token.type == TK_LEFT_BRACE) {
@@ -1319,11 +1308,11 @@ std::shared_ptr<ASTStatementNode> Parser::parse_unpacked_declaration_statement()
 
 		check_consume_semicolon();
 
-		return std::make_shared<ASTUnpackedDeclarationNode>(type_def.type, type_def.array_type, type_def.expr_dim,
-			type_def.type_name, type_def.type_name_space, declarations, expr, row, col);
+		return std::make_shared<ASTUnpackedDeclarationNode>(type_def.type, type_def.expr_dim,
+			type_def.type_name_space, type_def.type_name, declarations, expr, row, col);
 	}
 	else {
-		throw std::runtime_error(msg_header() + "expected identifier or [");
+		throw std::runtime_error(build_error_message("expected identifier or ["));
 	}
 }
 
@@ -1354,15 +1343,15 @@ std::shared_ptr<ASTStatementNode> Parser::parse_param_statement() {
 
 		check_consume_semicolon();
 
-		return std::make_shared<ASTUnpackedDeclarationNode>(type_def.type, type_def.array_type, type_def.expr_dim,
-			type_def.type_name, type_def.type_name_space, declarations, nullptr, row, col);
+		return std::make_shared<ASTUnpackedDeclarationNode>(type_def.type, type_def.expr_dim,
+			type_def.type_name_space, type_def.type_name, declarations, nullptr, row, col);
 	}
 	else {
-		throw std::runtime_error(msg_header() + "expected identifier or [");
+		throw std::runtime_error(build_error_message("expected identifier or ["));
 	}
 }
 
-VariableDefinition* Parser::parse_formal_param() {
+std::shared_ptr<VariableDefinition> Parser::parse_formal_param() {
 	bool is_rest = false;
 	std::string identifier;
 	std::shared_ptr<ASTExprNode> def_expr;
@@ -1383,10 +1372,6 @@ VariableDefinition* Parser::parse_formal_param() {
 
 	if (is_rest) {
 		auto ndim = std::make_shared<ASTLiteralNode<flx_int>>(0, row, col);
-		if (!TypeUtils::is_array(type_def.type)) {
-			type_def.array_type = type_def.type;
-			type_def.type = Type::T_ARRAY;
-		}
 		type_def.expr_dim.insert(type_def.expr_dim.begin(), ndim);
 	}
 
@@ -1399,11 +1384,10 @@ VariableDefinition* Parser::parse_formal_param() {
 		def_expr = nullptr;
 	}
 
-	return new VariableDefinition(identifier, type_def.type, type_def.type_name,
-		type_def.type_name_space, type_def.array_type, type_def.expr_dim, def_expr, is_rest, row, col);
+	return std::make_shared<VariableDefinition>(identifier, type_def, def_expr, is_rest);
 }
 
-VariableDefinition* Parser::parse_unpacked_formal_param() {
+std::shared_ptr<VariableDefinition> Parser::parse_unpacked_formal_param() {
 	std::string identifier;
 	std::string type_name;
 	std::string type_name_space;
@@ -1429,8 +1413,7 @@ VariableDefinition* Parser::parse_unpacked_formal_param() {
 		def_expr = nullptr;
 	}
 
-	return new VariableDefinition(identifier, type_def.type, type_def.type_name,
-		type_def.type_name_space, type_def.array_type, type_def.expr_dim, def_expr, false, row, col);
+	return std::make_shared<VariableDefinition>(identifier, type_def, def_expr);
 }
 
 std::vector<std::shared_ptr<ASTExprNode>> Parser::parse_actual_params() {
@@ -1452,12 +1435,7 @@ std::shared_ptr<ASTTypeNode> Parser::parse_type_node() {
 	auto array_type = Type::T_UNDEFINED;
 	auto dim = parse_dimension_vector();
 
-	if (dim.size() > 0) {
-		array_type = type;
-		type = Type::T_ARRAY;
-	}
-
-	return std::make_shared<ASTTypeNode>(TypeDefinition(type, array_type, dim, "", ""), row, col);
+	return std::make_shared<ASTTypeNode>(TypeDefinition(type, dim), row, col);
 }
 
 std::shared_ptr<ASTCallOperatorNode> Parser::parse_call_operator_node() {
@@ -1501,7 +1479,7 @@ std::shared_ptr<ASTCallOperatorNode> Parser::parse_call_operator_node() {
 	case TK_IS_ANY:
 		return std::make_shared<ASTIsAnyNode>(expr, row, col);
 	default:
-		throw std::runtime_error(msg_header() + "invalid token '" + Token::token_image(type) + "'");
+		throw std::runtime_error(build_error_message("invalid token '" + Token::token_image(type) + "'"));
 	}
 }
 
@@ -1532,7 +1510,7 @@ std::shared_ptr<ASTStructConstructorNode> Parser::parse_struct_constructor_node(
 	size_t row = current_token.row;
 	size_t col = current_token.col;
 	std::map<std::string, std::shared_ptr<ASTExprNode>> values = std::map<std::string, std::shared_ptr<ASTExprNode>>();
-	std::string name_space = std::move(idnode->name_space);
+	std::string name_space = std::move(idnode->access_name_space);
 	std::string type_name = std::move(idnode->identifier_vector[0].identifier);
 
 	consume_token();
@@ -1555,7 +1533,7 @@ std::shared_ptr<ASTStructConstructorNode> Parser::parse_struct_constructor_node(
 
 	check_current_token(TK_RIGHT_CURLY);
 
-	return std::make_shared<ASTStructConstructorNode>(type_name, name_space, values, row, col);
+	return std::make_shared<ASTStructConstructorNode>(name_space, type_name, values, row, col);
 }
 
 flx_bool Parser::parse_bool_literal() {
@@ -1579,7 +1557,7 @@ flx_int Parser::parse_int_literal() {
 		return std::stoll(current_token.value);
 	}
 	catch (...) {
-		throw std::runtime_error(msg_header() + "invalid literal: '" + current_token.value + "'");
+		throw std::runtime_error(build_error_message("invalid literal: '" + current_token.value + "'"));
 	}
 }
 
@@ -1588,7 +1566,7 @@ flx_float Parser::parse_float_literal() {
 		return std::stold(current_token.value);
 	}
 	catch (...) {
-		throw std::runtime_error(msg_header() + "invalid literal: '" + current_token.value + "'");
+		throw std::runtime_error(build_error_message("invalid literal: '" + current_token.value + "'"));
 	}
 }
 
@@ -1695,7 +1673,78 @@ std::shared_ptr<ASTThisNode> Parser::parse_this_node() {
 	size_t row = current_token.row;
 	size_t col = current_token.col;
 
-	return std::make_shared<ASTThisNode>(row, col);
+	return std::make_shared<ASTThisNode>(parse_identifier_vector(), row, col);
+}
+
+std::shared_ptr<ASTClassDefinitionNode> Parser::parse_class_definition() {
+	bool has_constructor = false;
+	std::string identifier;
+	std::vector<std::shared_ptr<ASTDeclarationNode>> declarations;
+	std::vector<std::shared_ptr<ASTFunctionDefinitionNode>> functions;
+	size_t row = current_token.row;
+	size_t col = current_token.col;
+	
+	consume_token(TK_IDENTIFIER);
+	identifier = current_token.value;
+
+	consume_token(TK_LEFT_CURLY);
+	while (next_token.type != TK_RIGHT_CURLY) {
+		if (next_token.type == TK_VAR || next_token.type == TK_CONST) {
+			consume_token();
+			consume_semicolon.push(true);
+			auto decl = parse_declaration_statement();
+			consume_semicolon.pop();
+			if (!decl->expr) {
+				decl->expr = std::make_shared<ASTNullNode>(decl->row, decl->col);
+			}
+			declarations.push_back(decl);
+		}
+		else if (next_token.type == TK_FUN) {
+			consume_token();
+			auto function_def = parse_function_statement();
+			function_def->is_class_function = true;
+			functions.push_back(function_def);
+		}
+		else if (next_token.type == TK_INIT) {
+			has_constructor = true;
+
+			consume_token();
+			consume_token(TK_LEFT_BRACKET);
+			auto function_def = parse_function_definition("init");
+			function_def->is_class_function = true;
+			functions.push_back(function_def);
+
+		}
+		//else if (next_token.type == TK_STATIC) {
+		//	consume_token();
+		//	if (next_token.type == TK_LEFT_BRACE) {
+		//		auto function_def = parse_function_statement();
+		//		functions.emplace(function_def->identifier, *function_def);
+		//	}
+		//	else {
+		//		auto class_var_def = parse_declaration_statement();
+		//		variables.emplace(class_var_def->identifier, *class_var_def);
+		//	}
+		//}
+		else {
+			throw std::runtime_error(build_error_message("expected 'variable' or 'function' definition"));
+		}
+	}
+
+	consume_token(TK_RIGHT_CURLY);
+
+	// default constructor
+	if (!has_constructor) {
+		auto default_constr = std::make_shared<ASTFunctionDefinitionNode>(
+			"init", std::vector<std::shared_ptr<TypeDefinition>>(),
+			Type::T_VOID, "", "", std::vector<std::shared_ptr<ASTExprNode>>(),
+			std::make_shared<ASTBlockNode>(std::vector<std::shared_ptr<ASTNode>>(), row, col),
+			row, col);
+		default_constr->is_class_function = true;
+		functions.insert(functions.begin(), default_constr);
+	}
+
+	return std::make_shared<ASTClassDefinitionNode>(identifier, declarations, functions, row, col);
 }
 
 bool Parser::check_check_consume_semicolon() {
@@ -1708,8 +1757,9 @@ void Parser::check_consume_semicolon() {
 	}
 }
 
-std::string Parser::msg_header() const {
-	return "(PERR) " + name + '[' + std::to_string(current_token.row) + ':' + std::to_string(current_token.col) + "]: ";
+std::string Parser::build_error_message(const std::string& error) {
+	return DebugInfo("", name, "", "", "<program>", current_token.row, current_token.col)
+		.build_error_message("SyntaxError", error);
 }
 
 Type Parser::parse_type() {
@@ -1745,13 +1795,10 @@ Type Parser::parse_type() {
 		return Type::T_FUNCTION;
 
 	case TK_IDENTIFIER:
-		return Type::T_STRUCT;
-
-	case TK_LEFT_CURLY:
-		return Type::T_ARRAY;
+		return Type::T_OBJECT;
 
 	default:
-		throw std::runtime_error(msg_header() + "invalid type");
+		throw std::runtime_error(build_error_message("invalid type"));
 	}
 }
 
@@ -1765,8 +1812,8 @@ void Parser::consume_token(LexTokenType type) {
 	check_current_token(type);
 }
 
-void Parser::check_current_token(LexTokenType type) const {
+void Parser::check_current_token(LexTokenType type) {
 	if (current_token.type != type) {
-		throw std::runtime_error(msg_header() + "expected '" + Token::token_image(type) + "'");
+		throw std::runtime_error(build_error_message("expected '" + Token::token_image(type) + "'"));
 	}
 }

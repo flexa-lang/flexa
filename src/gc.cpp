@@ -1,5 +1,7 @@
 #include "gc.hpp"
 
+#include <algorithm>
+
 using namespace core;
 using namespace core::runtime;
 
@@ -20,6 +22,7 @@ GCObject* GarbageCollector::allocate(GCObject* obj) {
 
 void GarbageCollector::add_root(GCObject* obj) {
 	roots.push_back(obj);
+	maybe_collect();
 }
 
 void GarbageCollector::remove_root(GCObject* obj) {
@@ -27,10 +30,12 @@ void GarbageCollector::remove_root(GCObject* obj) {
 	if (it != roots.end()) {
 		roots.erase(it);
 	}
+	maybe_collect();
 }
 
 void GarbageCollector::add_ptr_root(RuntimeValue** obj) {
 	ptr_roots.push_back(obj);
+	maybe_collect();
 }
 
 void GarbageCollector::remove_ptr_root(RuntimeValue** obj) {
@@ -38,10 +43,12 @@ void GarbageCollector::remove_ptr_root(RuntimeValue** obj) {
 	if (it != ptr_roots.end()) {
 		ptr_roots.erase(it);
 	}
+	maybe_collect();
 }
 
 void GarbageCollector::add_var_root(std::weak_ptr<GCObject> obj) {
 	var_roots.push_back(obj);
+	maybe_collect();
 }
 
 void GarbageCollector::remove_var_root(std::weak_ptr<GCObject> obj) {
@@ -57,10 +64,12 @@ void GarbageCollector::remove_var_root(std::weak_ptr<GCObject> obj) {
 			var_roots.erase(it);
 		}
 	}
+	maybe_collect();
 }
 
 void GarbageCollector::add_root_container(std::weak_ptr<std::vector<RuntimeValue*>> root_container) {
 	root_containers.emplace_back(root_container);
+	maybe_collect();
 }
 
 void GarbageCollector::remove_root_container(std::weak_ptr<std::vector<RuntimeValue*>> root_container) {
@@ -76,10 +85,12 @@ void GarbageCollector::remove_root_container(std::weak_ptr<std::vector<RuntimeVa
 			root_containers.erase(it);
 		}
 	}
+	maybe_collect();
 }
 
 void GarbageCollector::add_array_root(std::weak_ptr<flx_array> array_root) {
 	array_roots.emplace_back(array_root);
+	maybe_collect();
 }
 
 void GarbageCollector::remove_array_root(std::weak_ptr<flx_array> array_root) {
@@ -95,6 +106,7 @@ void GarbageCollector::remove_array_root(std::weak_ptr<flx_array> array_root) {
 			array_roots.erase(it);
 		}
 	}
+	maybe_collect();
 }
 
 void GarbageCollector::mark() {
@@ -203,15 +215,26 @@ void GarbageCollector::sweep() {
 	}
 }
 
-void GarbageCollector::collect() {
+void GarbageCollector::maybe_collect() {
 	if (!enable) {
 		return;
 	}
 
-	if (heap.size() <= max_heap) {
+	if (heap.size() <= curr_max_heap) {
 		return;
 	}
 
+	collect();
+}
+
+void GarbageCollector::collect() {
 	mark();
 	sweep();
+
+	if (max_heap) {
+		curr_max_heap = std::clamp(size_t(heap.size() * 2), size_t(0), max_heap);
+	}
+	else {
+		curr_max_heap = heap.size() * 2;
+	}
 }

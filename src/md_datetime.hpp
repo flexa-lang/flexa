@@ -2,6 +2,7 @@
 #define MD_DATETIME_HPP
 
 #include <ctime>
+#include <functional>
 
 #include "module.hpp"
 #include "types.hpp"
@@ -15,10 +16,10 @@ namespace core {
 			ModuleDateTime();
 			~ModuleDateTime();
 
-			flx_struct tm_to_date_time(runtime::Interpreter* visitor, time_t t, tm* tm);
+			flx_struct tm_to_date_time(std::function<RuntimeValue*(RuntimeValue*)> allocate_value, time_t t, tm* tm);
 
 			void register_functions(analysis::SemanticAnalyser* visitor) override;
-			void register_functions(runtime::Interpreter* visitor) override;
+			void register_functions(runtime::VirtualMachine* vm) override;
 		};
 
 	}

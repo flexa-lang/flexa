@@ -29,7 +29,6 @@ namespace interpreter {
 
 	public:
 		bool debug = false;
-		std::string engine;
 		std::string libs_path;
 		std::string workspace_path;
 		std::string main_file;
@@ -37,6 +36,7 @@ namespace interpreter {
 		std::vector<std::string> program_args;
 
 		FlexaCliArgs(int argc, const char* argv[]);
+		FlexaCliArgs() = default;
 
 		void parse_args();
 

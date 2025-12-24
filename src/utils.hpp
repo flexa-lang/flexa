@@ -21,7 +21,7 @@ char _getch();
 #define __min(a,b) std::min(a,b)
 #endif // !__min
 
-#elif defined(_WIN32) || defined(WIN32)
+#elif defined(_WIN32)
 
 #ifndef __max
 #define __max(a,b) (((a) > (b)) ? (a) : (b))

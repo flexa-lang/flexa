@@ -43,7 +43,7 @@ char utils::_getch() {
     return ch;
 }
 
-#elif defined(_WIN32) || defined(WIN32)
+#elif defined(_WIN32)
 
 #include <Windows.h>
 
@@ -159,7 +159,7 @@ std::string PathUtils::get_current_path() {
 
     std::filesystem::path path(std::string(result, count));
 
-#elif defined(_WIN32) || defined(WIN32)
+#elif defined(_WIN32)
 
 	HMODULE this_process_handle = GetModuleHandle(NULL);
 	wchar_t this_process_path[MAX_PATH];

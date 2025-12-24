@@ -1,4 +1,4 @@
-#if defined(_WIN32) || defined(WIN32)
+#if defined(_WIN32)
 
 #include "graphics_utils_win.hpp"
 
@@ -297,4 +297,4 @@ LRESULT CALLBACK Window::window_proc(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM
 	return DefWindowProc(hwnd, umsg, wparam, lparam);
 }
 
-#endif // defined(_WIN32) || defined(WIN32)
+#endif // defined(_WIN32)

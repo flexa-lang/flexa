@@ -10,7 +10,7 @@ namespace core {
 		class GCObject {
 		public:
 			bool marked = false;
-			virtual ~GCObject();
+			virtual ~GCObject() = default;
 			virtual std::vector<GCObject*> get_references() = 0;
 		};
 

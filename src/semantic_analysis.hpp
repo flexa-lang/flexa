@@ -7,6 +7,7 @@
 #include <map>
 #include <functional>
 #include <memory>
+#include <tuple>
 
 #include "ast.hpp"
 #include "scope.hpp"
@@ -19,59 +20,83 @@ namespace core {
 		class SemanticAnalyser : public Visitor, public ScopeManager {
 		public:
 			std::map<std::string, std::shared_ptr<ASTExprNode>> builtin_functions;
+			std::vector<std::string> args;
 
 		private:
-			dim_eval_func_t evaluate_access_vector_ptr = std::bind(&SemanticAnalyser::evaluate_access_vector, this, std::placeholders::_1);
-			std::vector<std::string> nmspaces;
+			std::stack<std::shared_ptr<Scope>> class_stack;
+			std::vector<std::string> all_name_spaces;
+			std::vector<std::string> parsed_libs;
 			SemanticValue current_expression;
-			std::stack<FunctionDefinition> current_function;
+			std::stack<std::shared_ptr<FunctionDefinition>> current_function;
+			std::vector<std::tuple<std::shared_ptr<FunctionDefinition>, size_t, size_t>> declared_functions;
+			bool is_assignment = false;
 			bool exception = false;
 			bool is_switch = false;
 			bool is_loop = false;
+			size_t module_level = 0;
 
 			std::vector<size_t> current_expression_array_dim;
-			int current_expression_array_dim_max;
+			int current_expression_array_dim_max = 0;
 			TypeDefinition current_expression_array_type;
-			bool is_max;
+			bool is_max = false;
 
 		private:
 			bool is_return_node(std::shared_ptr<ASTNode> astnode);
 			bool returns(std::shared_ptr<ASTNode> astnode);
 
+			std::shared_ptr<ASTExprNode> check_build_array(
+				const std::vector<size_t>& dim,
+				std::shared_ptr<ASTExprNode> init_expr
+			);
+			std::shared_ptr<ASTExprNode> build_array(
+				const std::vector<size_t>& dim,
+				std::shared_ptr<ASTExprNode> init_value,
+				size_t level
+			);
+
 			void declare_function_parameter(std::shared_ptr<Scope> scope, const VariableDefinition& param);
 
-			void equals_value(const SemanticValue& lval, const SemanticValue& rval);
+			std::vector<size_t> evaluate_access_vector(
+				const std::vector<std::shared_ptr<ASTExprNode>>& expr_access_vector
+			);
+			std::vector<size_t> evaluate_dimension_vector(
+				const std::vector<std::shared_ptr<ASTExprNode>>& expr_dimension_vector
+			);
 
-			std::vector<size_t> evaluate_access_vector(const std::vector<std::shared_ptr<ASTExprNode>>& expr_access_vector);
-
-			TypeDefinition do_operation(const std::string& op, TypeDefinition lvtype, TypeDefinition ltype, TypeDefinition rtype, bool is_expr = true);
-			std::shared_ptr<SemanticValue> access_value(std::shared_ptr<SemanticValue> value, const std::vector<Identifier>& identifier_vector, size_t i = 0);
-			void build_args(const std::vector<std::string>& args);
+			std::shared_ptr<SemanticValue> access_value(
+				std::shared_ptr<SemanticValue> value,
+				const std::vector<Identifier>& identifier_vector,
+				size_t i = 0
+			);
+			bool has_sub_value(std::vector<Identifier> identifier_vector);
 
 			void check_is_struct_exists(Type type, const std::string& name_space, const std::string& identifier);
-
-			const std::string& normalize_name_space(std::string& astnode_name_space, const std::string& name_space) const;
+			void determine_object_type(std::shared_ptr<TypeDefinition> typedefinition);
+			const std::string& normalize_name_space(
+				std::string& astnode_name_space,
+				const std::string& name_space
+			) const;
 			bool namespace_exists(const std::string& name_space);
 			void validate_namespace(const std::string& name_space) const;
-
-			void set_curr_pos(size_t row, size_t col) override;
-			std::string msg_header() override;
+			void setup_global_namespace(std::shared_ptr<Scope> scope);
 
 		public:
-			SemanticAnalyser(std::shared_ptr<Scope> global_scope, std::shared_ptr<ASTProgramNode> main_program,
-				std::map<std::string, std::shared_ptr<ASTProgramNode>> programs, const std::vector<std::string>& args);
+			SemanticAnalyser(
+				std::shared_ptr<Scope> global_scope,
+				std::shared_ptr<ASTModuleNode> main_module,
+				std::map<std::string, std::shared_ptr<ASTModuleNode>> modules,
+				const std::vector<std::string>& args
+			);
 			~SemanticAnalyser() = default;
 
 			void start();
 
-			void visit(std::shared_ptr<ASTProgramNode>) override;
+			void visit(std::shared_ptr<ASTModuleNode>) override;
 			void visit(std::shared_ptr<ASTUsingNode>) override;
 			void visit(std::shared_ptr<ASTIncludeNamespaceNode>) override;
 			void visit(std::shared_ptr<ASTExcludeNamespaceNode>) override;
 			void visit(std::shared_ptr<ASTDeclarationNode>) override;
 			void visit(std::shared_ptr<ASTUnpackedDeclarationNode>) override;
-			void visit(std::shared_ptr<ASTAssignmentNode>) override;
-			void visit(std::shared_ptr<ASTFunctionExpressionAssignmentNode>) override;
 			void visit(std::shared_ptr<ASTReturnNode>) override;
 			void visit(std::shared_ptr<ASTExitNode>) override;
 			void visit(std::shared_ptr<ASTBlockNode>) override;
@@ -95,14 +120,13 @@ namespace core {
 			void visit(std::shared_ptr<ASTLiteralNode<flx_float>>) override;
 			void visit(std::shared_ptr<ASTLiteralNode<flx_char>>) override;
 			void visit(std::shared_ptr<ASTLiteralNode<flx_string>>) override;
-			void visit(std::shared_ptr<ASTLambdaFunction>) override;
+			void visit(std::shared_ptr<ASTLambdaFunctionNode>) override;
 			void visit(std::shared_ptr<ASTArrayConstructorNode>) override;
 			void visit(std::shared_ptr<ASTStructConstructorNode>) override;
 			void visit(std::shared_ptr<ASTBinaryExprNode>) override;
 			void visit(std::shared_ptr<ASTUnaryExprNode>) override;
 			void visit(std::shared_ptr<ASTIdentifierNode>) override;
 			void visit(std::shared_ptr<ASTTernaryNode>) override;
-			void visit(std::shared_ptr<ASTInNode>) override;
 			void visit(std::shared_ptr<ASTFunctionCallNode>) override;
 			void visit(std::shared_ptr<ASTTypeCastNode>) override;
 			void visit(std::shared_ptr<ASTTypeNode>) override;
@@ -114,17 +138,10 @@ namespace core {
 			void visit(std::shared_ptr<ASTIsStructNode>) override;
 			void visit(std::shared_ptr<ASTIsArrayNode>) override;
 			void visit(std::shared_ptr<ASTIsAnyNode>) override;
+			void visit(std::shared_ptr<ASTInstructionNode>) override;
 			void visit(std::shared_ptr<ASTValueNode>) override;
-			void visit(std::shared_ptr<ASTBuiltinCallNode>) override;
+			void visit(std::shared_ptr<ASTClassDefinitionNode>) override;
 
-			intmax_t hash(std::shared_ptr<ASTExprNode>) override;
-			intmax_t hash(std::shared_ptr<ASTValueNode>) override;
-			intmax_t hash(std::shared_ptr<ASTIdentifierNode>) override;
-			intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_bool>>) override;
-			intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_int>>) override;
-			intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_float>>) override;
-			intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_char>>) override;
-			intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_string>>) override;
 		};
 
 	}

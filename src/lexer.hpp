@@ -18,6 +18,8 @@ namespace core {
 			~Lexer();
 
 			Token next_token();
+			size_t get_current_token() const;
+			void set_current_token(size_t token);
 
 		private:
 			char before_char;
@@ -45,7 +47,7 @@ namespace core {
 			Token process_symbol();
 			Token process_comment();
 
-			std::string msg_header();
+			std::string build_error_message(const std::string error);
 
 			static size_t find_mlv_closer(const std::string expr);
 		};

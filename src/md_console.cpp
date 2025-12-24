@@ -8,13 +8,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#elif defined(_WIN32) || defined(WIN32)
+#elif defined(_WIN32)
 
 #include <Windows.h>
 
 #endif // linux
 
-#include "interpreter.hpp"
+#include "vm.hpp"
 #include "semantic_analysis.hpp"
 #include "constants.hpp"
 
@@ -34,39 +34,39 @@ void ModuleConsole::register_functions(SemanticAnalyser* visitor) {
 	visitor->builtin_functions["set_console_font"] = nullptr;
 }
 
-void ModuleConsole::register_functions(Interpreter* visitor) {
+void ModuleConsole::register_functions(VirtualMachine* vm) {
 
-	visitor->builtin_functions["show_console"] = [this, visitor]() {
-#if defined(_WIN32) || defined(WIN32)
+	vm->builtin_functions["show_console"] = [this, vm]() {
+#if defined(_WIN32)
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
-
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("show"))->get_value();
 
 		::ShowWindow(::GetConsoleWindow(), val->get_b());
 
-#endif // linux
-		
+#endif // defined(_WIN32)
+
+		vm->push_empty_constant(Type::T_UNDEFINED);
+
 		};
 
-	visitor->builtin_functions["is_console_visible"] = [this, visitor]() {
+	vm->builtin_functions["is_console_visible"] = [this, vm]() {
 #ifdef linux
-		
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(flx_bool(true)));
 
-#elif defined(_WIN32) || defined(WIN32)
-		
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(flx_bool(::IsWindowVisible(::GetConsoleWindow()))));
+		vm->push_new_constant(new RuntimeValue(flx_bool(true)));
+
+#elif defined(_WIN32)
+
+		vm->push_new_constant(new RuntimeValue(flx_bool(::IsWindowVisible(::GetConsoleWindow()))));
 
 #endif // linux
-				
+
 		};
 
-	visitor->builtin_functions["set_console_color"] = [this, visitor]() {
+	vm->builtin_functions["set_console_color"] = [this, vm]() {
 
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
-		auto vals = std::vector {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto vals = std::vector{
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("background_color"))->get_value(),
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("foreground_color"))->get_value()
 		};
@@ -75,21 +75,19 @@ void ModuleConsole::register_functions(Interpreter* visitor) {
 
 		std::cout << "\033[0;" << (30 + vals[1]->get_i()) << ";" << (40 + vals[0]->get_i()) << "m";
 
-#elif defined(_WIN32) || defined(WIN32)
-				
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
+#elif defined(_WIN32)
 
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 		SetConsoleTextAttribute(hConsole, vals[0]->get_i() * 0x10 | vals[1]->get_i());
-		
+
 #endif // linux
+
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 
-	visitor->builtin_functions["set_console_cursor_position"] = [this, visitor]() {
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
-
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["set_console_cursor_position"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto vals = std::vector{
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("x"))->get_value(),
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("y"))->get_value()
@@ -99,27 +97,27 @@ void ModuleConsole::register_functions(Interpreter* visitor) {
 
 		std::cout << "\033[" << (vals[1]->get_i() + 1) << ";" << (vals[0]->get_i() + 1) << "H";
 
-#elif defined(_WIN32) || defined(WIN32)
+#elif defined(_WIN32)
 
 		COORD pos = { vals[0]->get_i(), vals[1]->get_i() };
 		HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
 		SetConsoleCursorPosition(output, pos);
-		
+
 #endif // linux
+
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 
-	visitor->builtin_functions["set_console_font"] = [this, visitor]() {
+	vm->builtin_functions["set_console_font"] = [this, vm]() {
 
 #ifdef linux
-		
-		std::cerr << "warning: this terminal does not support color change" << std::endl;
-		
-#elif defined(_WIN32) || defined(WIN32)
-		
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
 
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+		std::cerr << "warning: this terminal does not support color change" << std::endl;
+
+#elif defined(_WIN32)
+
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto vals = std::vector{
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("font_name"))->get_value(),
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("font_width"))->get_value(),
@@ -142,8 +140,10 @@ void ModuleConsole::register_functions(Interpreter* visitor) {
 		std::wcscpy(cfi.FaceName, pfontname.c_str());
 
 		SetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &cfi);
-				
+
 #endif // linux
+
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 

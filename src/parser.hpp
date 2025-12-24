@@ -8,6 +8,7 @@
 
 #include "ast.hpp"
 #include "lexer.hpp"
+#include "debuginfo.hpp"
 
 namespace core {
 
@@ -27,7 +28,7 @@ namespace core {
 		public:
 			Parser(const std::string& name, Lexer* lexer);
 
-			std::shared_ptr<ASTProgramNode> parse_program();
+			std::shared_ptr<ASTModuleNode> parse_module();
 
 		private:
 			// parse types and parameters
@@ -35,7 +36,7 @@ namespace core {
 			TypeDefinition parse_type_definition(Type default_type = Type::T_ANY);
 
 			// statement nodes
-			std::shared_ptr<ASTNode> parse_program_statement();
+			std::shared_ptr<ASTNode> parse_module_statement();
 			std::shared_ptr<ASTNamespaceManagerNode> parse_namespace_manager_statement();
 			std::shared_ptr<ASTUsingNode> parse_using_statement();
 			std::shared_ptr<ASTNode> parse_block_statement();
@@ -43,7 +44,6 @@ namespace core {
 			std::shared_ptr<ASTDeclarationNode> parse_declaration_statement();
 			std::shared_ptr<ASTDeclarationNode> parse_param_declaration_statement();
 			std::shared_ptr<ASTStatementNode> parse_unpacked_declaration_statement();
-			std::shared_ptr<ASTAssignmentNode> parse_assignment_statement(std::shared_ptr<ASTIdentifierNode> idnode);
 			std::shared_ptr<ASTUnaryExprNode> parse_increment_expression(std::shared_ptr<ASTIdentifierNode> idnode);
 			std::shared_ptr<ASTExprNode> parse_function_expression_assignment_tail();
 			std::shared_ptr<ASTReturnNode> parse_return_statement();
@@ -64,14 +64,16 @@ namespace core {
 			std::shared_ptr<ASTForEachNode> parse_foreach_statement();
 			std::shared_ptr<ASTWhileNode> parse_while_statement();
 			std::shared_ptr<ASTDoWhileNode> parse_do_while_statement();
-			std::shared_ptr<ASTLambdaFunction> parse_function_expression();
+			std::shared_ptr<ASTLambdaFunctionNode> parse_function_expression();
 			std::shared_ptr<ASTFunctionDefinitionNode> parse_function_statement();
 			std::shared_ptr<ASTFunctionDefinitionNode> parse_function_definition(const std::string& identifier);
 			std::shared_ptr<ASTStructDefinitionNode> parse_struct_definition();
+			std::shared_ptr<ASTClassDefinitionNode> parse_class_definition();
 
 			// expression nodes
 			std::shared_ptr<ASTExprNode> parse_statement_expression();
 			std::shared_ptr<ASTExprNode> parse_expression();
+			std::shared_ptr<ASTExprNode> parse_assignment_expression();
 			std::shared_ptr<ASTExprNode> parse_ternary_expression();
 			std::shared_ptr<ASTExprNode> parse_in_expression();
 			std::shared_ptr<ASTExprNode> parse_logical_or_expression();
@@ -83,13 +85,12 @@ namespace core {
 			std::shared_ptr<ASTExprNode> parse_relational_expression();
 			std::shared_ptr<ASTExprNode> parse_spaceship_expression();
 			std::shared_ptr<ASTExprNode> parse_bitwise_shift_expression();
-			std::shared_ptr<ASTExprNode> parse_simple_expression();
-			std::shared_ptr<ASTExprNode> parse_term();
+			std::shared_ptr<ASTExprNode> parse_additive_expression();
+			std::shared_ptr<ASTExprNode> parse_multiplicative_expression();
 			std::shared_ptr<ASTExprNode> parse_exponentiation();
-			std::shared_ptr<ASTExprNode> parse_factor();
+			std::shared_ptr<ASTExprNode> parse_primary_expression();
 
 			// factor expression nodes
-			std::shared_ptr<ASTNode> parse_identifier_statement();
 			std::shared_ptr<ASTArrayConstructorNode> parse_array_constructor_node();
 			std::shared_ptr<ASTStructConstructorNode> parse_struct_constructor_node(std::shared_ptr<ASTIdentifierNode> idnode);
 			std::shared_ptr<ASTFunctionCallNode> parse_function_call_tail();
@@ -101,9 +102,9 @@ namespace core {
 
 			// special
 			std::vector<std::shared_ptr<ASTExprNode>> parse_actual_params();
-			VariableDefinition* parse_struct_var_def();
-			VariableDefinition* parse_formal_param();
-			VariableDefinition* parse_unpacked_formal_param();
+			std::shared_ptr<VariableDefinition> parse_struct_var_def();
+			std::shared_ptr<VariableDefinition> parse_formal_param();
+			std::shared_ptr<VariableDefinition> parse_unpacked_formal_param();
 			std::shared_ptr<ASTStatementNode> parse_param_statement();
 			std::shared_ptr<ASTExprNode> parse_identifier_expression();
 			std::shared_ptr<ASTIdentifierNode> parse_identifier_node();
@@ -118,11 +119,11 @@ namespace core {
 
 			void consume_token();
 			void consume_token(LexTokenType type);
-			void check_current_token(LexTokenType type) const;
+			void check_current_token(LexTokenType type);
 			bool check_check_consume_semicolon();
 			void check_consume_semicolon();
 
-			std::string msg_header() const;
+			std::string build_error_message(const std::string& error);
 
 		};
 	}

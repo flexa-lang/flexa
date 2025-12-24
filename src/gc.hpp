@@ -21,7 +21,8 @@ namespace core {
 
 		public:
 			bool enable = true;
-			size_t max_heap = 9999;
+			size_t max_heap = 0;
+			size_t curr_max_heap = 1024;
 
 			GarbageCollector();
 			~GarbageCollector();
@@ -46,6 +47,7 @@ namespace core {
 			void mark();
 			void mark_object(GCObject* obj);
 			void sweep();
+			void maybe_collect();
 			void collect();
 
 		};

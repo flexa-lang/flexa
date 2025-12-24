@@ -7,10 +7,12 @@ namespace core {
 
 	namespace analysis {
 		class SemanticAnalyser;
+		class Compiler;
 	}
 
 	namespace runtime {
 		class Interpreter;
+		class VirtualMachine;
 	}
 
 	namespace modules {
@@ -23,7 +25,7 @@ namespace core {
 			virtual ~Module() = default;
 
 			virtual void register_functions(analysis::SemanticAnalyser* visitor) = 0;
-			virtual void register_functions(runtime::Interpreter* visitor) = 0;
+			virtual void register_functions(runtime::VirtualMachine* vm) = 0;
 		};
 
 	}

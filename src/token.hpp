@@ -22,19 +22,20 @@ namespace core {
 		static bool is_assignment_op(const std::string& op);
 		static bool is_assignment_collection_op(const std::string& op);
 		static bool is_assignment_int_op(const std::string& op);
-		static bool is_assignment_int_ex_op(const std::string& op);
+		static bool is_assignment_int_exclusive_op(const std::string& op);
 		static bool is_assignment_float_op(const std::string& op);
 
 		static bool is_expression_collection_op(const std::string& op);
 		static bool is_expression_int_op(const std::string& op);
-		static bool is_expression_int_ex_op(const std::string& op);
+		static bool is_expression_int_exclusive_op(const std::string& op);
 		static bool is_expression_float_op(const std::string& op);
 
+		static bool is_bool_op(const std::string& op);
 		static bool is_equality_op(const std::string& op);
 		static bool is_relational_op(const std::string& op);
 		static bool is_collection_op(const std::string& op);
 		static bool is_int_op(const std::string& op);
-		static bool is_int_ex_op(const std::string& op);
+		static bool is_int_exclusive_op(const std::string& op);
 		static bool is_float_op(const std::string& op);
 	};
 

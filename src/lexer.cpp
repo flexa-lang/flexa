@@ -1,5 +1,7 @@
 #include "lexer.hpp"
 
+#include "debuginfo.hpp"
+
 #include <stack>
 #include <stdexcept>
 
@@ -11,8 +13,16 @@ Lexer::Lexer(const std::string& name, const std::string& source)
 	tokenize();
 }
 
-Lexer::Lexer(const std::string& name, const std::string& source, size_t start_row, size_t start_col)
-	: source(source), name(name), current_row(start_row), current_col(start_col) {
+Lexer::Lexer(
+	const std::string& name,
+	const std::string& source,
+	size_t start_row,
+	size_t start_col
+)
+	: source(source),
+	name(name), 
+	current_row(start_row),
+	current_col(start_col) {
 	tokenize();
 }
 
@@ -76,7 +86,8 @@ Token Lexer::process_comment() {
 	do {
 		comment += current_char;
 		advance();
-	} while (has_next() && (is_block && (current_char != '/' || before_char != '*') || !is_block && current_char != '\n'));
+	} while (has_next()
+		&& (is_block && (current_char != '/' || before_char != '*') || !is_block && current_char != '\n'));
 
 	comment += current_char;
 	advance();
@@ -93,7 +104,7 @@ Token Lexer::process_string() {
 
 	do {
 		if (current_char == '\n') {
-			throw std::runtime_error(msg_header() + "missing terminating '\"' character");
+			throw std::runtime_error(build_error_message("missing terminating '\"' character"));
 		}
 
 		if (!spec) {
@@ -233,7 +244,7 @@ Token Lexer::process_char() {
 	chr += current_char;
 	advance();
 	if (has_next() && current_char != '\'') {
-		throw std::runtime_error(msg_header() + "missing terminating ' character");
+		throw std::runtime_error(build_error_message("missing terminating ' character"));
 	}
 	chr += current_char;
 	advance();
@@ -302,7 +313,7 @@ Token Lexer::process_number() {
 	while (has_next() && (std::isdigit(current_char) || current_char == '.')) {
 		if (current_char == '.') {
 			if (has_dot) {
-				throw std::runtime_error(msg_header() + "found '" + current_char + "' defining float");
+				throw std::runtime_error(build_error_message("found '" + std::string{ current_char } + "' defining float"));
 			}
 			has_dot = true;
 		}
@@ -386,14 +397,16 @@ Token Lexer::process_symbol() {
 			advance();
 		}
 	case '+': // let fallthrough
-		if (current_char == '+') {
+		if (current_char == '+' && !is_unary) {
 			is_unary = true;
 			str_symbol += current_char;
 			advance();
 		}
-		if (current_char == '=') {
+		if (current_char == '=' && !is_unary) {
 			str_symbol += current_char;
 			advance();
+			type = TK_ASSIGNMENT_OP;
+			break;
 		}
 		type = is_unary ? TK_INCREMENT_OP : TK_ADDITIVE_OP;
 		break;
@@ -417,6 +430,8 @@ Token Lexer::process_symbol() {
 		if (current_char == '=') {
 			str_symbol += current_char;
 			advance();
+			type = TK_ASSIGNMENT_OP;
+			break;
 		}
 		type = TK_MULTIPLICATIVE_OP;
 		break;
@@ -425,6 +440,8 @@ Token Lexer::process_symbol() {
 		if (current_char == '=') {
 			str_symbol += current_char;
 			advance();
+			type = TK_ASSIGNMENT_OP;
+			break;
 		}
 		type = TK_BITWISE_AND;
 		break;
@@ -433,6 +450,8 @@ Token Lexer::process_symbol() {
 		if (current_char == '=') {
 			str_symbol += current_char;
 			advance();
+			type = TK_ASSIGNMENT_OP;
+			break;
 		}
 		type = TK_BITWISE_XOR;
 		break;
@@ -441,6 +460,8 @@ Token Lexer::process_symbol() {
 		if (current_char == '=') {
 			str_symbol += current_char;
 			advance();
+			type = TK_ASSIGNMENT_OP;
+			break;
 		}
 		type = TK_BITWISE_OR;
 		break;
@@ -467,6 +488,10 @@ Token Lexer::process_symbol() {
 				type = TK_THREE_WAY_OP;
 				break;
 			}
+			if (found) {
+				type = TK_ASSIGNMENT_OP;
+				break;
+			}
 		}
 		type = found ? TK_BITWISE_SHIFT : TK_RELATIONAL_OP;
 		break;
@@ -476,15 +501,14 @@ Token Lexer::process_symbol() {
 			str_symbol += current_char;
 			advance();
 			type = TK_EQUALITY_OP;
+			break;
 		}
-		else {
-			type = TK_EQUALS;
-		}
+		type = TK_EQUALS;
 		break;
 
 	case '!':
 		if (current_char != '=') {
-			throw std::runtime_error(msg_header() + "expected '='");
+			throw std::runtime_error(build_error_message("expected '='"));
 		}
 		str_symbol += current_char;
 		advance();
@@ -539,7 +563,7 @@ Token Lexer::process_symbol() {
 			str_symbol += current_char;
 			advance();
 			if (current_char != '.') {
-				throw std::runtime_error(msg_header() + "expected '.'");
+				throw std::runtime_error(build_error_message("expected '.'"));
 			}
 			str_symbol += current_char;
 			advance();
@@ -554,12 +578,8 @@ Token Lexer::process_symbol() {
 		type = TK_QMARK;
 		break;
 
-	case '$':
-		type = TK_DSIGN;
-		break;
-
 	default:
-		type = TK_ERROR;
+		throw std::runtime_error(build_error_message("invalid token '" + std::string{ symbol }+ "'"));
 	}
 
 	return Token(type, str_symbol, current_row, start_col);
@@ -598,6 +618,15 @@ Token Lexer::next_token() {
 	}
 }
 
-std::string Lexer::msg_header() {
-	return "(LERR) " + name + '[' + std::to_string(current_row) + ':' + std::to_string(current_col) + "]: ";
+size_t Lexer::get_current_token() const {
+	return current_token;
+}
+
+void Lexer::set_current_token(size_t token) {
+	current_token = token;
+}
+
+std::string Lexer::build_error_message(const std::string error) {
+	return DebugInfo("", name, "", "", "<program>", current_row, current_col)
+		.build_error_message("LexicalError", error);
 }

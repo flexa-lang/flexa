@@ -8,17 +8,16 @@
 #include <memory>
 
 #include "types.hpp"
+#include "debuginfo.hpp"
 
 namespace core {
 
-	class ASTProgramNode;
+	class ASTModuleNode;
 	class ASTUsingNode;
 	class ASTIncludeNamespaceNode;
 	class ASTExcludeNamespaceNode;
 	class ASTDeclarationNode;
 	class ASTUnpackedDeclarationNode;
-	class ASTAssignmentNode;
-	class ASTFunctionExpressionAssignmentNode;
 	class ASTFunctionCallNode;
 	class ASTReturnNode;
 	class ASTBlockNode;
@@ -38,9 +37,10 @@ namespace core {
 	class ASTDoWhileNode;
 	class ASTFunctionDefinitionNode;
 	class ASTStructDefinitionNode;
+	class ASTClassDefinitionNode;
 	template <typename T>
 	class ASTLiteralNode;
-	class ASTLambdaFunction;
+	class ASTLambdaFunctionNode;
 	class ASTExprNode;
 	class ASTArrayConstructorNode;
 	class ASTStructConstructorNode;
@@ -48,7 +48,6 @@ namespace core {
 	class ASTUnaryExprNode;
 	class ASTIdentifierNode;
 	class ASTTernaryNode;
-	class ASTInNode;
 	class ASTFunctionCallNode;
 	class ASTTypeCastNode;
 	class ASTTypeNode;
@@ -60,31 +59,31 @@ namespace core {
 	class ASTIsStructNode;
 	class ASTIsArrayNode;
 	class ASTIsAnyNode;
+	class ASTInstructionNode;
 	class ASTValueNode;
-	class ASTBuiltinCallNode;
 
 	class Visitor {
 	public:
-		std::map<std::string, std::shared_ptr<ASTProgramNode>> programs;
-		std::shared_ptr<ASTProgramNode> main_program;
-		std::stack<std::shared_ptr<ASTProgramNode>> current_program_stack;
-		std::vector<std::string> parsed_libs;
-		int curr_row;
-		int curr_col;
+		std::map<std::string, std::shared_ptr<ASTModuleNode>> modules;
+		std::shared_ptr<ASTModuleNode> main_module;
+		std::stack<std::shared_ptr<ASTModuleNode>> current_module_stack;
+		std::stack<DebugInfo> current_debug_info_stack;
 
-		Visitor(const std::map<std::string, std::shared_ptr<ASTProgramNode>>& programs, std::shared_ptr<ASTProgramNode> main_program, const std::string& current_this_name);
+		Visitor(
+			const std::map<std::string, std::shared_ptr<ASTModuleNode>>& modules,
+			std::shared_ptr<ASTModuleNode> main_module
+		)
+			: modules(modules),
+			main_module(main_module) {
+			current_module_stack.push(main_module);
+		};
 
-		virtual void set_curr_pos(size_t row, size_t col) = 0;
-		virtual std::string msg_header() = 0;
-
-		virtual void visit(std::shared_ptr<ASTProgramNode>) = 0;
+		virtual void visit(std::shared_ptr<ASTModuleNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTUsingNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTIncludeNamespaceNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTExcludeNamespaceNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTDeclarationNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTUnpackedDeclarationNode>) = 0;
-		virtual void visit(std::shared_ptr<ASTAssignmentNode>) = 0;
-		virtual void visit(std::shared_ptr<ASTFunctionExpressionAssignmentNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTReturnNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTBlockNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTContinueNode>) = 0;
@@ -108,14 +107,13 @@ namespace core {
 		virtual void visit(std::shared_ptr<ASTLiteralNode<flx_float>>) = 0;
 		virtual void visit(std::shared_ptr<ASTLiteralNode<flx_char>>) = 0;
 		virtual void visit(std::shared_ptr<ASTLiteralNode<flx_string>>) = 0;
-		virtual void visit(std::shared_ptr<ASTLambdaFunction>) = 0;
+		virtual void visit(std::shared_ptr<ASTLambdaFunctionNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTArrayConstructorNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTStructConstructorNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTBinaryExprNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTUnaryExprNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTIdentifierNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTTernaryNode>) = 0;
-		virtual void visit(std::shared_ptr<ASTInNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTFunctionCallNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTTypeCastNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTTypeNode>) = 0;
@@ -127,17 +125,9 @@ namespace core {
 		virtual void visit(std::shared_ptr<ASTIsStructNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTIsArrayNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTIsAnyNode>) = 0;
+		virtual void visit(std::shared_ptr<ASTInstructionNode>) = 0;
 		virtual void visit(std::shared_ptr<ASTValueNode>) = 0;
-		virtual void visit(std::shared_ptr<ASTBuiltinCallNode>) = 0;
-
-		virtual intmax_t hash(std::shared_ptr<ASTExprNode>) = 0;
-		virtual intmax_t hash(std::shared_ptr<ASTValueNode>) = 0;
-		virtual intmax_t hash(std::shared_ptr<ASTIdentifierNode>) = 0;
-		virtual intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_bool>>) = 0;
-		virtual intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_int>>) = 0;
-		virtual intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_float>>) = 0;
-		virtual intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_char>>) = 0;
-		virtual intmax_t hash(std::shared_ptr<ASTLiteralNode<flx_string>>) = 0;
+		virtual void visit(std::shared_ptr<ASTClassDefinitionNode>) = 0;
 
 	};
 

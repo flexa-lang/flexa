@@ -3,15 +3,11 @@
 
 #include <string>
 
-#include "lexer.hpp"
-#include "parser.hpp"
-#include "semantic_analysis.hpp"
-#include "interpreter.hpp"
 #include "flx_utils.hpp"
 
 #ifdef linux
 #define clear_screen() system("clear")
-#elif defined(_WIN32) || defined(WIN32)
+#elif defined(_WIN32)
 #define clear_screen() system("cls")
 #endif // !linux
 

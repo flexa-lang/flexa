@@ -1,10 +1,10 @@
 #include "md_input.hpp"
 
-#if defined(_WIN32) || defined(WIN32)
+#if defined(_WIN32)
 #include <Windows.h>
-#endif // defined(_WIN32) || defined(WIN32)
+#endif // defined(_WIN32)
 
-#include "interpreter.hpp"
+#include "vm.hpp"
 #include "semantic_analysis.hpp"
 #include "constants.hpp"
 
@@ -29,154 +29,6 @@ void ModuleInput::register_functions(SemanticAnalyser* visitor) {
 	visitor->builtin_functions["is_mouse_button_pressed"] = nullptr;
 }
 
-void ModuleInput::register_functions(Interpreter* visitor) {
-
-	visitor->builtin_functions["update_key_states"] = [this, visitor]() {
-
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
-
-#ifdef linux
-
-		throw std::runtime_error("Not implemented yet");
-		
-#elif  defined(_WIN32) || defined(WIN32)
-
-		previous_key_state = current_key_state;
-
-		for (int i = 0; i < KEY_COUNT; ++i) {
-			current_key_state[i] = GetAsyncKeyState(i) & 0x8000;
-		}
-
-#endif // linux
-
-	};
-
-	visitor->builtin_functions["is_key_pressed"] = [this, visitor]() {
-		bool is_pressed = false;
-
-#ifdef linux
-
-		throw std::runtime_error("Not implemented yet");
-		
-#elif  defined(_WIN32) || defined(WIN32)
-
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
-		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("key"))->get_value();
-
-		int key = val->get_i();
-
-		{
-			std::lock_guard<std::mutex> lock(state_mutex);
-			is_pressed = current_key_state[key];
-		}
-
-#endif // linux
-
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(flx_bool(is_pressed)));
-
-		};
-
-	visitor->builtin_functions["is_key_released"] = [this, visitor]() {
-		bool is_released = false;
-
-#ifdef linux
-		
-		throw std::runtime_error("Not implemented yet");
-				
-#elif  defined(_WIN32) || defined(WIN32)
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
-		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("key"))->get_value();
-
-		int key = val->get_i();
-
-		{
-			std::lock_guard<std::mutex> lock(state_mutex);
-			is_released = previous_key_state[key] && !current_key_state[key];
-			if (is_released) {
-				previous_key_state[key] = false;
-			}
-		}
-		
-#endif // linux
-
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(flx_bool(is_released)));
-
-		};
-
-	visitor->builtin_functions["get_mouse_position"] = [this, visitor]() {
-
-		long long x, y = 0;
-
-#ifdef linux
-		
-		throw std::runtime_error("Not implemented yet");
-						
-#elif  defined(_WIN32) || defined(WIN32)
-
-		POINT point;
-		GetCursorPos(&point);
-		x = point.x;
-		y = point.y;
-
-#endif // linux
-
-		flx_struct str = flx_struct();
-		str["x"] = visitor->allocate_value(new RuntimeValue(flx_int(x * 2 * 0.905)));
-		str["y"] = visitor->allocate_value(new RuntimeValue(flx_int(y * 2 * 0.875)));
-		RuntimeValue* res = visitor->allocate_value(new RuntimeValue(str, "Point", Constants::STD_NAMESPACE));
-
-		visitor->current_expression_value = res;
-
-		};
-
-	visitor->builtin_functions["set_mouse_position"] = [this, visitor]() {
-
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
-
-#ifdef linux
-		
-		throw std::runtime_error("Not implemented yet");
-						
-#elif  defined(_WIN32) || defined(WIN32)
-
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
-		auto vals = std::vector{
-			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("x"))->get_value(),
-			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("y"))->get_value()
-		};
-
-		int x = vals[0]->get_i();
-		int y = vals[1]->get_i();
-		SetCursorPos(x, y);
-
-#endif // linux
-
-		};
-
-	visitor->builtin_functions["is_mouse_button_pressed"] = [this, visitor]() {
-
-		bool is_pressed = false;
-
-#ifdef linux
-				
-		throw std::runtime_error("Not implemented yet");
-								
-#elif  defined(_WIN32) || defined(WIN32)
-		
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
-		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("button"))->get_value();
-
-		int button = val->get_i();
-		
-		is_pressed = (GetAsyncKeyState(button) & 0x8000) != 0;
-
-#endif // linux
-
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(flx_bool(is_pressed)));
-		
-		};
-}
-
 void ModuleInput::key_update_loop() {
 	while (running) {
 		{
@@ -184,11 +36,11 @@ void ModuleInput::key_update_loop() {
 			for (int i = 0; i < KEY_COUNT; ++i) {
 				bool current = false;
 
-#if defined(_WIN32) || defined(WIN32)
+#if defined(_WIN32)
 
 				current = GetAsyncKeyState(i) & 0x8000;
 
-#endif // defined(_WIN32) || defined(WIN32)
+#endif // defined(_WIN32)
 
 				previous_key_state[i] = previous_key_state[i] || current;
 				current_key_state[i] = current;
@@ -212,4 +64,161 @@ void ModuleInput::stop() {
 			key_update_thread.join();
 		}
 	}
+}
+
+void ModuleInput::register_functions(VirtualMachine* vm) {
+
+	vm->builtin_functions["update_key_states"] = [this, vm]() {
+
+#ifdef linux
+
+		throw std::runtime_error("Not implemented yet");
+
+#elif  defined(_WIN32)
+
+		previous_key_state = current_key_state;
+
+		for (int i = 0; i < KEY_COUNT; ++i) {
+			current_key_state[i] = GetAsyncKeyState(i) & 0x8000;
+		}
+
+#endif // linux
+
+		vm->push_empty_constant(Type::T_UNDEFINED);
+
+		};
+
+	vm->builtin_functions["is_key_pressed"] = [this, vm]() {
+		bool is_pressed = false;
+
+#ifdef linux
+
+		throw std::runtime_error("Not implemented yet");
+
+#elif  defined(_WIN32)
+
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("key"))->get_value();
+
+		int key = val->get_i();
+
+		{
+			std::lock_guard<std::mutex> lock(state_mutex);
+			is_pressed = current_key_state[key];
+		}
+
+#endif // linux
+
+		vm->push_new_constant(new RuntimeValue(flx_bool(is_pressed)));
+
+		};
+
+	vm->builtin_functions["is_key_released"] = [this, vm]() {
+		bool is_released = false;
+
+#ifdef linux
+
+		throw std::runtime_error("Not implemented yet");
+
+#elif  defined(_WIN32)
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("key"))->get_value();
+
+		int key = val->get_i();
+
+		{
+			std::lock_guard<std::mutex> lock(state_mutex);
+			is_released = previous_key_state[key] && !current_key_state[key];
+			if (is_released) {
+				previous_key_state[key] = false;
+			}
+		}
+
+#endif // linux
+
+		vm->push_new_constant(new RuntimeValue(flx_bool(is_released)));
+
+		};
+
+	vm->builtin_functions["get_mouse_position"] = [this, vm]() {
+
+		long long x, y = 0;
+
+#ifdef linux
+
+		throw std::runtime_error("Not implemented yet");
+
+#elif  defined(_WIN32)
+
+		POINT point;
+		GetCursorPos(&point);
+		x = point.x;
+		y = point.y;
+
+#endif // linux
+
+		flx_struct str = flx_struct();
+
+		auto x_var = std::make_shared<RuntimeVariable>("x", Type::T_INT);
+		x_var->set_value(vm->allocate_value(new RuntimeValue(flx_int(x * 2 * 0.905))));
+		vm->gc.add_var_root(x_var);
+
+		auto y_var = std::make_shared<RuntimeVariable>("y", Type::T_INT);
+		y_var->set_value(vm->allocate_value(new RuntimeValue(flx_int(y * 2 * 0.875))));
+		vm->gc.add_var_root(y_var);
+
+		str["x"] = x_var;
+		str["y"] = y_var;
+
+		vm->push_new_constant(new RuntimeValue(str, "Point", Constants::STD_NAMESPACE));
+
+		};
+
+	vm->builtin_functions["set_mouse_position"] = [this, vm]() {
+
+#ifdef linux
+
+		throw std::runtime_error("Not implemented yet");
+
+#elif  defined(_WIN32)
+
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto vals = std::vector{
+			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("x"))->get_value(),
+			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("y"))->get_value()
+		};
+
+		int x = vals[0]->get_i();
+		int y = vals[1]->get_i();
+		SetCursorPos(x, y);
+
+#endif // linux
+
+		vm->push_empty_constant(Type::T_UNDEFINED);
+
+		};
+
+	vm->builtin_functions["is_mouse_button_pressed"] = [this, vm]() {
+
+		bool is_pressed = false;
+
+#ifdef linux
+
+		throw std::runtime_error("Not implemented yet");
+
+#elif  defined(_WIN32)
+
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("button"))->get_value();
+
+		int button = val->get_i();
+
+		is_pressed = (GetAsyncKeyState(button) & 0x8000) != 0;
+
+#endif // linux
+
+		vm->push_new_constant(new RuntimeValue(flx_bool(is_pressed)));
+
+		};
+
 }

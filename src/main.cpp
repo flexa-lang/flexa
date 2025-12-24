@@ -1,9 +1,10 @@
 ﻿#ifdef linux
 #include <locale.h>
-#elif defined(_WIN32) || defined(WIN32)
+#elif defined(_WIN32)
 #include <Windows.h>
 #endif // linux
 
+#include "constants.hpp"
 #include "flx_repl.hpp"
 #include "flx_interpreter.hpp"
 #include "watch.hpp"
@@ -13,11 +14,18 @@ using namespace interpreter;
 int main(int argc, const char* argv[]) {
 #ifdef linux
 	setlocale(LC_ALL, "en_US.UTF-8");
-#elif defined(_WIN32) || defined(WIN32)
+#elif defined(_WIN32)
 	SetConsoleOutputCP(CP_UTF8);
 #endif // linux
 
-	auto args = FlexaCliArgs(argc, argv);
+	FlexaCliArgs args;
+	try {
+		args = FlexaCliArgs(argc, argv);
+	}
+	catch (std::exception& ex) {
+		std::cout << ex.what() << std::endl;
+		return -3;
+	}
 
 	if (!args.main_file.empty() && args.workspace_path.empty()) {
 		throw std::runtime_error("workspace must be informed");
@@ -30,6 +38,8 @@ int main(int argc, const char* argv[]) {
 	if (args.source_files.size() > 0 && args.workspace_path.empty()) {
 		throw std::runtime_error("workspace must be informed");
 	}
+
+	core::Constants::debug = args.debug;
 
 	if (args.workspace_path.empty()) {
 		return FlexaRepl::execute(args);

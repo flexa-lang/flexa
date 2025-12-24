@@ -1,6 +1,6 @@
 #include "md_gc.hpp"
 
-#include "interpreter.hpp"
+#include "vm.hpp"
 #include "semantic_analysis.hpp"
 #include "constants.hpp"
 
@@ -16,47 +16,56 @@ void ModuleGC::register_functions(SemanticAnalyser* visitor) {
 	visitor->builtin_functions["gc_is_enabled"] = nullptr;
 	visitor->builtin_functions["gc_enable"] = nullptr;
 	visitor->builtin_functions["gc_collect"] = nullptr;
+	visitor->builtin_functions["gc_maybe_collect"] = nullptr;
 	visitor->builtin_functions["gc_get_max_heap"] = nullptr;
 	visitor->builtin_functions["gc_set_max_heap"] = nullptr;
 }
 
-void ModuleGC::register_functions(Interpreter* visitor) {
+void ModuleGC::register_functions(VirtualMachine* vm) {
 
-	visitor->builtin_functions["gc_is_enabled"] = [this, visitor]() {
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(flx_bool(visitor->gc.enable)));
+	vm->builtin_functions["gc_is_enabled"] = [this, vm]() {
+		vm->push_new_constant(new RuntimeValue(flx_bool(vm->gc.enable)));
 
 		};
 
-	visitor->builtin_functions["gc_enable"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["gc_enable"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("enable"))->get_value();
 
-		visitor->gc.enable = val->get_b();
+		vm->gc.enable = val->get_b();
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
-
-		};
-
-	visitor->builtin_functions["gc_collect"] = [this, visitor]() {
-
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
-
-		visitor->gc.collect();
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 
-	visitor->builtin_functions["gc_get_max_heap"] = [this, visitor]() {
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(flx_int(visitor->gc.max_heap)));
+	vm->builtin_functions["gc_maybe_collect"] = [this, vm]() {
+
+		vm->gc.maybe_collect();
+
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 
-	visitor->builtin_functions["gc_set_max_heap"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["gc_collect"] = [this, vm]() {
+
+		vm->gc.collect();
+
+		vm->push_empty_constant(Type::T_UNDEFINED);
+
+		};
+
+	vm->builtin_functions["gc_get_max_heap"] = [this, vm]() {
+		vm->push_new_constant(new RuntimeValue(flx_int(vm->gc.max_heap)));
+
+		};
+
+	vm->builtin_functions["gc_set_max_heap"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("max_heap"))->get_value();
 
-		visitor->gc.max_heap = val->get_i();
+		vm->gc.max_heap = val->get_i();
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 

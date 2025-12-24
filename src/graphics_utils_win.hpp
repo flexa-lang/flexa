@@ -1,13 +1,13 @@
 #ifndef GRAPHICS_UTILS_WIN_HPP
 #define GRAPHICS_UTILS_WIN_HPP
 
-#if defined(_WIN32) || defined(WIN32)
+#if defined(_WIN32)
 
 #include <Windows.h>
 #include <map>
 #include <string>
 
-#include "graphics_utils.hpp"
+#include "graphics_base.hpp"
 
 namespace core {
 
@@ -78,6 +78,6 @@ namespace core {
 
 }
 
-#endif // defined(_WIN32) || defined(WIN32)
+#endif // defined(_WIN32)
 
 #endif // !GRAPHICS_UTILS_HPP

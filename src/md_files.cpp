@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include "interpreter.hpp"
+#include "vm.hpp"
 #include "semantic_analysis.hpp"
 #include "constants.hpp"
 
@@ -34,21 +34,26 @@ void ModuleFiles::register_functions(SemanticAnalyser* visitor) {
 	visitor->builtin_functions["delete_path"] = nullptr;
 }
 
-void ModuleFiles::register_functions(Interpreter* visitor) {
+void ModuleFiles::register_functions(VirtualMachine* vm) {
 
-	visitor->builtin_functions["open"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["open"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto vals = std::vector{
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("path"))->get_value(),
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("mode"))->get_value()
 		};
 
-		// initialize file struct values
-		RuntimeValue* cpfile = visitor->allocate_value(new RuntimeValue(Type::T_STRUCT));
+		auto path_var = std::make_shared<RuntimeVariable>("path", Type::T_STRING);
+		path_var->set_value(vm->allocate_value(new RuntimeValue(vals[0])));
+		vm->gc.add_var_root(path_var);
+
+		auto mode_var = std::make_shared<RuntimeVariable>("mode", Type::T_INT);
+		mode_var->set_value(vm->allocate_value(new RuntimeValue(vals[1])));
+		vm->gc.add_var_root(mode_var);
 
 		flx_struct str = flx_struct();
-		str["path"] = visitor->allocate_value(new RuntimeValue(vals[0]));
-		str["mode"] = visitor->allocate_value(new RuntimeValue(vals[1]));
+		str["path"] = path_var;
+		str["mode"] = mode_var;
 
 		int parmode = vals[1]->get_i();
 
@@ -56,9 +61,17 @@ void ModuleFiles::register_functions(Interpreter* visitor) {
 		try {
 			std::ios_base::openmode mode = std::ios_base::openmode(parmode);
 			fs = new std::fstream(vals[0]->get_s(), mode);
-			str[INSTANCE_ID_NAME] = visitor->allocate_value(new RuntimeValue(flx_int(fs)));
-			cpfile->set(str, "File", Constants::STD_NAMESPACE);
-			visitor->current_expression_value = cpfile;
+
+			auto instance_id_var = std::make_shared<RuntimeVariable>(INSTANCE_ID_NAME, Type::T_INT);
+			instance_id_var->set_value(vm->allocate_value(new RuntimeValue((flx_int)fs)));
+			vm->gc.add_var_root(instance_id_var);
+
+			str[INSTANCE_ID_NAME] = instance_id_var;
+
+			// initialize file struct values
+			RuntimeValue* flxfile = vm->allocate_value(new RuntimeValue(str, Constants::STD_NAMESPACE, "File"));
+
+			vm->push_constant(flxfile);
 		}
 		catch (std::runtime_error ex) {
 			throw std::runtime_error(ex.what());
@@ -66,181 +79,189 @@ void ModuleFiles::register_functions(Interpreter* visitor) {
 
 		};
 
-	visitor->builtin_functions["read"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["read"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("file"))->get_value();
 
-		if (!TypeUtils::is_void(val->type)) {
-			auto rval = visitor->allocate_value(new RuntimeValue(Type::T_STRING));
+		if (val->is_void()) {
+			throw std::runtime_error("Cannot read from a null");
+		}
 
-			std::fstream* fs = ((std::fstream*)val->get_str()[INSTANCE_ID_NAME]->get_i());
+		auto rval = vm->allocate_value(new RuntimeValue(Type::T_STRING));
 
-			fs->seekg(0);
+		std::fstream* fs = ((std::fstream*)val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i());
 
-			std::stringstream ss;
-			std::string line;
-			while (std::getline(*fs, line)) {
-				ss << line << std::endl;
+		fs->seekg(0);
+
+		std::stringstream ss;
+		std::string line;
+		while (std::getline(*fs, line)) {
+			ss << line << std::endl;
+		}
+		rval->set(ss.str());
+
+		vm->push_constant(rval);
+
+		};
+
+	vm->builtin_functions["read_line"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("file"))->get_value();
+
+		if (val->is_void()) {
+			throw std::runtime_error("Cannot read line from a null");
+		}
+
+		auto rval = vm->allocate_value(new RuntimeValue(Type::T_STRING));
+
+		std::fstream* fs = ((std::fstream*)val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i());
+
+		std::string line;
+		std::getline(*fs, line);
+		rval->set(line);
+
+		vm->push_constant(rval);
+
+		};
+
+	vm->builtin_functions["read_all_bytes"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("file"))->get_value();
+
+		if (val->is_void()) {
+			throw std::runtime_error("Cannot read bytes from a null");
+		}
+
+		std::fstream* fs = ((std::fstream*)val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i());
+
+		fs->seekg(0);
+
+		// find file size
+		fs->seekg(0, std::ios::end);
+		std::streamsize buffer_size = fs->tellg();
+		fs->seekg(0, std::ios::beg);
+
+		// buffer to store readed data
+		char* buffer = new char[buffer_size];
+
+		flx_array arr = flx_array(buffer_size);
+
+		// read all bytes
+		if (fs->read(buffer, buffer_size)) {
+			for (std::streamsize i = 0; i < buffer_size; ++i) {
+				RuntimeValue* val = vm->allocate_value(new RuntimeValue(Type::T_CHAR));
+				val->set(buffer[i]);
+				arr[i] = val;
 			}
-			rval->set(ss.str());
-
-			visitor->current_expression_value = rval;
 		}
+
+		auto rval = vm->allocate_value(new RuntimeValue(arr, Type::T_CHAR, std::vector<size_t>{(size_t)arr.size()}));
+
+		delete[] buffer;
+
+		vm->push_constant(rval);
 
 		};
 
-	visitor->builtin_functions["read_line"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
-		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("file"))->get_value();
-
-		if (!TypeUtils::is_void(val->type)) {
-			auto rval = visitor->allocate_value(new RuntimeValue(Type::T_STRING));
-
-			std::fstream* fs = ((std::fstream*)val->get_str()[INSTANCE_ID_NAME]->get_i());
-
-			std::string line;
-			std::getline(*fs, line);
-			rval->set(line);
-
-			visitor->current_expression_value = rval;
-		}
-
-		};
-
-	visitor->builtin_functions["read_all_bytes"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
-		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("file"))->get_value();
-
-		if (!TypeUtils::is_void(val->type)) {
-			auto rval = visitor->allocate_value(new RuntimeValue(Type::T_ARRAY));
-			rval->set_arr_type(Type::T_CHAR);
-
-			std::fstream* fs = ((std::fstream*)val->get_str()[INSTANCE_ID_NAME]->get_i());
-
-			fs->seekg(0);
-
-			// find file size
-			fs->seekg(0, std::ios::end);
-			std::streamsize buffer_size = fs->tellg();
-			fs->seekg(0, std::ios::beg);
-
-			// buffer to store readed data
-			char* buffer = new char[buffer_size];
-
-			flx_array arr = flx_array(buffer_size);
-
-			// read all bytes
-			if (fs->read(buffer, buffer_size)) {
-				for (std::streamsize i = 0; i < buffer_size; ++i) {
-					RuntimeValue* val = visitor->allocate_value(new RuntimeValue(Type::T_CHAR));
-					val->set(buffer[i]);
-					arr[i] = val;
-				}
-			}
-			rval->set(arr, Type::T_CHAR, std::vector<size_t>{(size_t)arr.size()});
-
-			delete[] buffer;
-
-			visitor->current_expression_value = rval;
-		}
-
-		};
-
-	visitor->builtin_functions["write"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["write"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto vals = std::vector{
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("file"))->get_value(),
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("data"))->get_value()
 		};
 
 		RuntimeValue* cpfile = vals[0];
-		if (!TypeUtils::is_void(cpfile->type)) {
-			std::fstream* fs = ((std::fstream*)cpfile->get_str()[INSTANCE_ID_NAME]->get_i());
-			*fs << vals[1]->get_s();
+		if (cpfile->is_void()) {
+			throw std::runtime_error("Cannot write to a null");
 		}
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
+		std::fstream* fs = ((std::fstream*)cpfile->get_str()[INSTANCE_ID_NAME]->get_value()->get_i());
+		*fs << vals[1]->get_s();
+
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 
-	visitor->builtin_functions["write_bytes"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["write_bytes"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto vals = std::vector{
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("file"))->get_value(),
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("bytes"))->get_value()
 		};
 
 		RuntimeValue* cpfile = vals[0];
-		if (!TypeUtils::is_void(cpfile->type)) {
-			std::fstream* fs = ((std::fstream*)cpfile->get_str()[INSTANCE_ID_NAME]->get_i());
-
-			auto arr = vals[1]->get_arr();
-
-			std::streamsize buffer_size = arr.size();
-
-			char* buffer = new char[buffer_size];
-
-			for (std::streamsize i = 0; i < buffer_size; ++i) {
-				buffer[i] = arr[i]->get_c();
-			}
-
-			fs->write(buffer, sizeof(buffer));
+		if (cpfile->is_void()) {
+			throw std::runtime_error("Cannot write to a null");
 		}
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
+		std::fstream* fs = ((std::fstream*)cpfile->get_str()[INSTANCE_ID_NAME]->get_value()->get_i());
+
+		auto arr = vals[1]->get_arr();
+
+		std::streamsize buffer_size = arr.size();
+
+		char* buffer = new char[buffer_size];
+
+		for (std::streamsize i = 0; i < buffer_size; ++i) {
+			buffer[i] = arr[i]->get_c();
+		}
+
+		fs->write(buffer, sizeof(buffer));
+
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 
-	visitor->builtin_functions["is_open"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["is_open"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("file"))->get_value();
 
-		if (!TypeUtils::is_void(val->type)) {
-			auto rval = visitor->allocate_value(new RuntimeValue(Type::T_BOOL));
-			rval->set(flx_bool(((std::fstream*)val->get_str()[INSTANCE_ID_NAME]->get_i())->is_open()));
-			visitor->current_expression_value = rval;
+		if (val->is_void()) {
+			throw std::runtime_error("Cannot check is_open on a null");
 		}
+		auto rval = vm->allocate_value(new RuntimeValue(Type::T_BOOL));
+		rval->set(flx_bool(((std::fstream*)val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i())->is_open()));
+		vm->push_constant(rval);
 
 		};
 
-	visitor->builtin_functions["close"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["close"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("file"))->get_value();
 
-		if (!TypeUtils::is_void(val->type)) {
-			if (((std::fstream*)val->get_str()[INSTANCE_ID_NAME]->get_i())) {
-				((std::fstream*)val->get_str()[INSTANCE_ID_NAME]->get_i())->close();
-				((std::fstream*)val->get_str()[INSTANCE_ID_NAME]->get_i())->~basic_fstream();
-				val->set_null();
-			}
+		auto instance_id = val->get_raw_str()->at(INSTANCE_ID_NAME);
+		if (auto rawfile = (std::fstream*)instance_id->get_value()->get_i()) {
+			rawfile->close();
+			delete rawfile;
+			instance_id->get_value()->set(flx_int(0));
 		}
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 
-	visitor->builtin_functions["is_file"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["is_file"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("path"))->get_value();
 
 		std::filesystem::path path = val->get_s();
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(std::filesystem::is_regular_file(path)));
+		vm->push_new_constant(new RuntimeValue(std::filesystem::is_regular_file(path)));
 
 		};
 
-	visitor->builtin_functions["is_dir"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["is_dir"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("path"))->get_value();
 
 		std::filesystem::path path = val->get_s();
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(std::filesystem::is_directory(path)));
+		vm->push_new_constant(new RuntimeValue(std::filesystem::is_directory(path)));
 
 		};
 
-	visitor->builtin_functions["create_dir"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["create_dir"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("path"))->get_value();
 
 		std::filesystem::path path = val->get_s();
@@ -249,12 +270,12 @@ void ModuleFiles::register_functions(Interpreter* visitor) {
 			throw std::runtime_error("cannot create directory");
 		}
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 
-	visitor->builtin_functions["list_dir"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["list_dir"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("path"))->get_value();
 
 		std::filesystem::path path = val->get_s();
@@ -269,32 +290,32 @@ void ModuleFiles::register_functions(Interpreter* visitor) {
 
 		for (size_t i = 0; i < files.size(); ++i) {
 			const auto& file = files[i];
-			values[i] = visitor->allocate_value(new RuntimeValue(file));
+			values[i] = vm->allocate_value(new RuntimeValue(file));
 		}
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(values));
+		vm->push_new_constant(new RuntimeValue(values, Type::T_STRING, std::vector<size_t>{size_t(values.size())}));
 
 		};
 
-	visitor->builtin_functions["path_exists"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["path_exists"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("path"))->get_value();
 
 		std::filesystem::path path = val->get_s();
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(std::filesystem::exists(path)));
+		vm->push_new_constant(new RuntimeValue(std::filesystem::exists(path)));
 
 		};
 
-	visitor->builtin_functions["delete_path"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["delete_path"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("path"))->get_value();
 
 		std::filesystem::path path = val->get_s();
 
 		std::filesystem::remove_all(path);
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 

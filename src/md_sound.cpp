@@ -1,11 +1,11 @@
 #include "md_sound.hpp"
 
-#if defined(_WIN32) || defined(WIN32)
+#if defined(_WIN32)
 #include <Windows.h>
-#endif // defined(_WIN32) || defined(WIN32)
+#endif // defined(_WIN32)
 #include <memory>
 
-#include "interpreter.hpp"
+#include "vm.hpp"
 #include "semantic_analysis.hpp"
 #include "constants.hpp"
 
@@ -26,10 +26,10 @@ void ModuleSound::register_functions(SemanticAnalyser* visitor) {
 	visitor->builtin_functions["set_volume"] = nullptr;
 }
 
-void ModuleSound::register_functions(Interpreter* visitor) {
+void ModuleSound::register_functions(VirtualMachine* vm) {
 
-	visitor->builtin_functions["play_sound"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["play_sound"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("path"))->get_value();
 
 		auto file_path = val->get_s();
@@ -38,19 +38,19 @@ void ModuleSound::register_functions(Interpreter* visitor) {
 #ifdef linux
 
 		throw std::runtime_error("Not implemented yet");
-		
-#elif  defined(_WIN32) || defined(WIN32)
+
+#elif  defined(_WIN32)
 
 		PlaySound(wfile_path.c_str(), NULL, SND_ASYNC | SND_FILENAME | SND_LOOP);
 
 #endif // linux
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 
-	visitor->builtin_functions["play_sound_once"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["play_sound_once"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("path"))->get_value();
 
 		auto file_path = val->get_s();
@@ -59,35 +59,35 @@ void ModuleSound::register_functions(Interpreter* visitor) {
 #ifdef linux
 
 		throw std::runtime_error("Not implemented yet");
-		
-#elif  defined(_WIN32) || defined(WIN32)
+
+#elif  defined(_WIN32)
 
 		PlaySound(wfile_path.c_str(), NULL, SND_ASYNC | SND_FILENAME);
 
 #endif // linux
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 
-	visitor->builtin_functions["stop_sound"] = [this, visitor]() {
+	vm->builtin_functions["stop_sound"] = [this, vm]() {
 
 #ifdef linux
 
 		throw std::runtime_error("Not implemented yet");
 
-#elif  defined(_WIN32) || defined(WIN32)
+#elif  defined(_WIN32)
 
 		PlaySound(NULL, 0, 0);
 
 #endif // linux
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
 
-	visitor->builtin_functions["set_volume"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["set_volume"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("volume"))->get_value();
 
 		unsigned long volume = val->get_f() * 65535;
@@ -96,13 +96,14 @@ void ModuleSound::register_functions(Interpreter* visitor) {
 
 		throw std::runtime_error("Not implemented yet");
 
-#elif  defined(_WIN32) || defined(WIN32)
+#elif  defined(_WIN32)
 
 		waveOutSetVolume(0, MAKELONG(volume, volume));
 
 #endif // linux
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(Type::T_UNDEFINED));
+		vm->push_empty_constant(Type::T_UNDEFINED);
 
 		};
+
 }

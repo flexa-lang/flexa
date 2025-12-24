@@ -13,7 +13,7 @@ namespace core {
 			~ModuleSound();
 
 			void register_functions(analysis::SemanticAnalyser* visitor) override;
-			void register_functions(runtime::Interpreter* visitor) override;
+			void register_functions(runtime::VirtualMachine* vm) override;
 		};
 
 	}

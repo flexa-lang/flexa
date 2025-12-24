@@ -6,7 +6,9 @@
 #include "parser.hpp"
 #include "utils.hpp"
 #include "dependency_resolver.hpp"
-#include "interpreter.hpp"
+#include "compiler.hpp"
+#include "vm.hpp"
+#include "semantic_analysis.hpp"
 
 using namespace interpreter;
 using namespace core;
@@ -27,8 +29,8 @@ int FlexaInterpreter::execute() {
 	return 0;
 }
 
-FlexaSource FlexaInterpreter::load_program(const std::string& source) {
-	FlexaSource source_program;
+FlexaSource FlexaInterpreter::load_module(const std::string& source) {
+	FlexaSource source_module;
 
 	auto current_file_path = std::string{ std::filesystem::path::preferred_separator } + utils::PathUtils::normalize_path_sep(source);
 	std::string current_full_path = "";
@@ -43,92 +45,92 @@ FlexaSource FlexaInterpreter::load_program(const std::string& source) {
 		throw std::runtime_error("file not found: '" + current_file_path + "'");
 	}
 
-	source_program = FlexaSource{ FlxUtils::get_lib_name(source), FlxUtils::load_source(current_full_path) };
+	source_module = FlexaSource{ FlxUtils::get_lib_name(source), FlxUtils::load_source(current_full_path) };
 
-	return source_program;
+	return source_module;
 }
 
-std::vector<FlexaSource> FlexaInterpreter::load_programs(const std::vector<std::string>& source_files) {
-	std::vector<FlexaSource> source_programs;
+std::vector<FlexaSource> FlexaInterpreter::load_modules(const std::vector<std::string>& source_files) {
+	std::vector<FlexaSource> source_modules;
 
 	for (const auto& source : source_files) {
-		source_programs.push_back(load_program(source));
+		source_modules.push_back(load_module(source));
 	}
 
-	return source_programs;
+	return source_modules;
 }
 
-void FlexaInterpreter::parse_programs(const std::vector<FlexaSource>& source_programs, std::shared_ptr<ASTProgramNode>* main_program,
-	std::map<std::string, std::shared_ptr<ASTProgramNode>>* programs) {
+void FlexaInterpreter::parse_modules(const std::vector<FlexaSource>& source_modules, std::shared_ptr<ASTModuleNode>* main_module,
+	std::map<std::string, std::shared_ptr<ASTModuleNode>>* modules) {
 
-	for (const auto& source : source_programs) {
+	for (const auto& source : source_modules) {
 		Lexer lexer(source.name, source.source);
 		parser::Parser parser(source.name , &lexer);
 
-		std::shared_ptr<ASTProgramNode> program = parser.parse_program();
+		std::shared_ptr<ASTModuleNode> module = parser.parse_module();
 
-		if (!program) {
-			std::cerr << "Failed to parse program: " << source.name << std::endl;
+		if (!module) {
+			std::cerr << "Failed to parse module: " << source.name << std::endl;
 			continue;
 		}
 
-		if (!*main_program) {
-			*main_program = program;
+		if (!*main_module) {
+			*main_module = module;
 		}
 
-		(*programs)[program->name] = program;
+		(*modules)[module->name] = module;
 	}
 }
 
 int FlexaInterpreter::interpreter() {
-	FlexaSource main_program_src;
-	std::vector<FlexaSource> source_programs;
+	FlexaSource main_module_src;
+	std::vector<FlexaSource> source_modules;
 	try {
-		main_program_src = load_program(args.main_file);
-		source_programs = load_programs(args.source_files);
-		source_programs.emplace(source_programs.begin(), main_program_src);
+		main_module_src = load_module(args.main_file);
+		source_modules = load_modules(args.source_files);
+		source_modules.emplace(source_modules.begin(), main_module_src);
 	}
 	catch (const std::runtime_error& e) {
 		std::cerr << e.what() << std::endl;
 		return EXIT_FAILURE;
 	}
 
-	std::shared_ptr<Scope> semantic_global_scope = std::make_shared<Scope>(nullptr);
-	std::shared_ptr<Scope> interpreter_global_scope = std::make_shared<Scope>(nullptr);
-
 	try {
-		std::shared_ptr<ASTProgramNode> main_program = nullptr;
-		std::map<std::string, std::shared_ptr<ASTProgramNode>> programs;
-		parse_programs(source_programs, &main_program, &programs);
+		std::shared_ptr<ASTModuleNode> main_module = nullptr;
+		std::map<std::string, std::shared_ptr<ASTModuleNode>> modules;
+		parse_modules(source_modules, &main_module, &modules);
 		size_t libs_size = 0;
 		do {
-			DependencyResolver libfinder(main_program, programs);
-			libfinder.start();
+			DependencyResolver dependency_resolver(main_module, modules);
+			dependency_resolver.start();
 
-			libs_size = libfinder.lib_names.size();
+			libs_size = dependency_resolver.lib_names.size();
 
 			if (libs_size > 0) {
-				auto cplib_programs = load_programs(libfinder.lib_names);
-				parse_programs(cplib_programs, &main_program, &programs);
+				auto flxlib_modules = load_modules(dependency_resolver.lib_names);
+				parse_modules(flxlib_modules, &main_module, &modules);
 			}
 		} while (libs_size > 0);
 
-		semantic_global_scope->owner = main_program;
-		interpreter_global_scope->owner = main_program;
+		std::shared_ptr<Scope> semantic_global_scope = std::make_shared<Scope>(main_module->name_space, main_module->name);
+		std::shared_ptr<Scope> interpreter_global_scope = std::make_shared<Scope>(main_module->name_space, main_module->name);
 
-		SemanticAnalyser semantic_analyser(semantic_global_scope, main_program, programs, args.program_args);
+		SemanticAnalyser semantic_analyser(semantic_global_scope, main_module, modules, args.program_args);
 		semantic_analyser.start();
 
 		intmax_t result = 0;
 
-		if (args.engine == "ast") {
-			Interpreter interpreter(interpreter_global_scope, main_program, programs, args.program_args);
-			interpreter.start();
-			result = interpreter.current_expression_value->get_i();
-		}
-		else {
-			throw std::runtime_error("not implemented yet");
-		}
+		// compile
+		Compiler compiler(main_module, modules);
+		compiler.start();
+
+		BytecodeInstruction::write_bytecode_table(compiler.bytecode_program, project_root + "\\" + main_module->name + ".flxt");
+
+		// execute
+		VirtualMachine vm(interpreter_global_scope, compiler.vm_debug, compiler.bytecode_program);
+		vm.run();
+
+		result = vm.get_evaluation_stack_top()->get_i();
 
 		return result;
 	}

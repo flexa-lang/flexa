@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <cstring>
 
-#elif defined(_WIN32) || defined(WIN32)
+#elif defined(_WIN32)
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -16,7 +16,7 @@
 
 #endif // linux
 
-#include "interpreter.hpp"
+#include "vm.hpp"
 #include "semantic_analysis.hpp"
 #include "utils.hpp"
 #include "constants.hpp"
@@ -33,24 +33,24 @@ void ModuleHTTP::register_functions(SemanticAnalyser* visitor) {
 	visitor->builtin_functions["request"] = nullptr;
 }
 
-void ModuleHTTP::register_functions(Interpreter* visitor) {
+void ModuleHTTP::register_functions(VirtualMachine* vm) {
 
-	visitor->builtin_functions["request"] = [this, visitor]() {
-		auto& scope = visitor->scopes[Constants::STD_NAMESPACE].back();
+	vm->builtin_functions["request"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("req"))->get_value();
 
 		RuntimeValue* config_value = val;
-		if (TypeUtils::is_void(config_value->type)) {
+		if (config_value->is_void()) {
 			throw std::runtime_error("'req' is null");
 		}
 		flx_struct config_str = config_value->get_str();
-		std::string hostname = config_str["hostname"]->get_s();
-		std::string path = config_str["path"]->get_s();
-		std::string method = config_str["method"]->get_s();
+		std::string hostname = config_str["hostname"]->get_value()->get_s();
+		std::string path = config_str["path"]->get_value()->get_s();
+		std::string method = config_str["method"]->get_value()->get_s();
 		std::string port = "80";
 		std::string headers = "";
 		std::string parameters = "";
-		std::string data = config_str["data"]->get_s();
+		std::string data = config_str["data"]->get_value()->get_s();
 
 		// check mandatory parameters
 		if (hostname.empty()) {
@@ -66,27 +66,27 @@ void ModuleHTTP::register_functions(Interpreter* visitor) {
 		}
 
 		// get port
-		int param_port = config_str["port"]->get_i();
-		if (param_port  != 0) {
+		int param_port = config_str["port"]->get_value()->get_i();
+		if (param_port != 0) {
 			port = std::to_string(param_port);
 		}
 
 		// build parameters
-		flx_struct str_parameters = config_str["parameters"]->get_str();
-		for (auto parameter : str_parameters) {
+		flx_struct str_parameters = config_str["parameters"]->get_value()->get_str();
+		for (const auto& parameter : str_parameters) {
 			if (parameters.empty()) {
 				parameters = "?";
 			}
 			else {
 				parameters += "&";
 			}
-			parameters += parameter.first + "=" + parameter.second->get_s();
+			parameters += parameter.first + "=" + parameter.second->get_value()->get_s();
 		}
 
 		// build headers
-		flx_struct str_headers = config_str["headers"]->get_str();
-		for (auto header : str_headers) {
-			headers += header.first + ": " + header.second->get_s() + "\r\n";
+		flx_struct str_headers = config_str["headers"]->get_value()->get_str();
+		for (const auto& header : str_headers) {
+			headers += header.first + ": " + header.second->get_value()->get_s() + "\r\n";
 		}
 
 #ifdef linux
@@ -119,8 +119,8 @@ void ModuleHTTP::register_functions(Interpreter* visitor) {
 			freeaddrinfo(result);
 			throw std::runtime_error("Connection failed.");
 		}
-		
-#elif defined(_WIN32) || defined(WIN32)
+
+#elif defined(_WIN32)
 
 		WSADATA wsa;
 		SOCKET sock;
@@ -159,7 +159,7 @@ void ModuleHTTP::register_functions(Interpreter* visitor) {
 			WSACleanup();
 			throw std::runtime_error("Connection failed. Error: " + WSAGetLastError());
 		}
-		
+
 #endif // linux
 
 		// prepare HTTP request
@@ -194,13 +194,13 @@ void ModuleHTTP::register_functions(Interpreter* visitor) {
 #ifdef linux
 
 		close(sock);
-		
-#elif defined(_WIN32) || defined(WIN32)
-		
+
+#elif defined(_WIN32)
+
 		closesocket(sock);
 		freeaddrinfo(result);
 		WSACleanup();
-		
+
 #endif // linux
 
 		std::string raw_response(buffer, bytes_received);
@@ -208,32 +208,8 @@ void ModuleHTTP::register_functions(Interpreter* visitor) {
 		bool is_body = false;
 		std::string res_body;
 
-		// prepare flx instructions
-
-		// set new scope
-		const auto& current_program = visitor->current_program_stack.top();
-		visitor->scopes[Constants::STD_NAMESPACE].push_back(std::make_shared<Scope>(current_program));
-		auto& curr_scope = visitor->scopes[Constants::STD_NAMESPACE].back();
-
-		// dictionary struct
-		flx_struct res_headers_str;
-		res_headers_str["root"] = visitor->allocate_value(new RuntimeValue(Type::T_VOID));
-		res_headers_str["size"] = visitor->allocate_value(new RuntimeValue(flx_int(0)));
-		auto headers_value = visitor->allocate_value(new RuntimeValue(res_headers_str, "Dictionary", Constants::STD_NAMESPACE));
-		// dict identifier
-		auto header_identifier = std::make_shared<ASTIdentifierNode>(std::vector<Identifier>{ Identifier("headers_value") }, Constants::STD_NAMESPACE, 0, 0);
-		
-		// create dict expr
-		auto dict_expr = std::make_shared<ASTValueNode>(headers_value, 0, 0);
-
-		// declare dict
-		(std::make_shared<ASTDeclarationNode>("headers_value", Type::T_STRUCT, Type::T_UNDEFINED, std::vector<std::shared_ptr<ASTExprNode>>(),
-			"Dictionary", Constants::STD_NAMESPACE, dict_expr, false, 0, 0))->accept(visitor);
-
-		// dictionary emplace function declaration
-		auto identifier_vector = std::vector<Identifier>{ Identifier("emplace") };
-		auto fcall = std::make_shared<ASTFunctionCallNode>(Constants::STD_NAMESPACE, identifier_vector,
-			std::vector<std::shared_ptr<ASTExprNode>>(), std::vector<Identifier>(), nullptr, 0, 0);
+		// dictionary temporary vector
+		std::vector<std::pair<flx_string, flx_string>> res_headers;
 
 		for (size_t i = 1; i < response_lines.size(); ++i) {
 			auto& line = response_lines[i];
@@ -246,38 +222,88 @@ void ModuleHTTP::register_functions(Interpreter* visitor) {
 					continue;
 				}
 
-				// setup emplace parameters
 				auto header = utils::StringUtils::split(line, ": ");
-				auto parameters = std::vector<std::shared_ptr<ASTExprNode>> {
-					// dictionary
-					header_identifier,
-					// key
-					std::make_shared<ASTLiteralNode<flx_string>>(header[0], 0, 0),
-					// value
-					std::make_shared<ASTLiteralNode<flx_string>>(header[1], 0, 0)
-				};
-
-				// call emplace
-				fcall->parameters = parameters;
-				fcall->accept(visitor);
+				res_headers.push_back(std::make_pair(header[0], header[1]));
 
 			}
 		}
 
+		auto flx_arr = flx_array(res_headers.size());
+		for (size_t i = 0; i < res_headers.size(); ++i) {
+			const auto& header = res_headers[i];
+			// create header struct
+			auto key_var = std::make_shared<RuntimeVariable>("key", Type::T_STRING);
+			key_var->set_value(vm->allocate_value(new RuntimeValue(flx_string(header.first))));
+			vm->gc.add_var_root(key_var);
+
+			auto value_var = std::make_shared<RuntimeVariable>("value", Type::T_STRING);
+			value_var->set_value(vm->allocate_value(new RuntimeValue(flx_string(header.second))));
+			vm->gc.add_var_root(value_var);
+
+			flx_struct header_str;
+			header_str["key"] = key_var;
+			header_str["value"] = value_var;
+
+			// create header value
+			auto header_value = vm->allocate_value(new RuntimeValue(
+				header_str,
+				Constants::DEFAULT_NAMESPACE,
+				Constants::BUILTIN_STRUCT_NAMES[BuiltinStructs::BS_ENTRY]
+			));
+
+			// push header to headers array
+			flx_arr[i] = header_value;
+		}
+		auto headers_value = vm->allocate_value(new RuntimeValue(
+			flx_arr,
+			Type::T_STRUCT,
+			std::vector<size_t>{res_headers.size()},
+			Constants::DEFAULT_NAMESPACE,
+			Constants::BUILTIN_STRUCT_NAMES[BuiltinStructs::BS_ENTRY]
+		));
+
 		// create response struct
-		flx_struct res_str;
 		auto status = utils::StringUtils::split(response_lines[0], ' ');
-		res_str["http_version"] = visitor->allocate_value(new RuntimeValue(flx_string(status[0])));
-		res_str["status"] = visitor->allocate_value(new RuntimeValue(flx_int(stoll(status[1]))));
-		res_str["status_description"] = visitor->allocate_value(new RuntimeValue(flx_string(status[2])));
-		res_str["headers"] = headers_value;
-		res_str["data"] = visitor->allocate_value(new RuntimeValue(flx_string(res_body)));
-		res_str["raw"] = visitor->allocate_value(new RuntimeValue(flx_string(raw_response)));
 
-		visitor->current_expression_value = visitor->allocate_value(new RuntimeValue(res_str, "HttpResponse", Constants::STD_NAMESPACE));
+		auto http_version_var = std::make_shared<RuntimeVariable>("http_version", Type::T_STRING);
+		http_version_var->set_value(vm->allocate_value(new RuntimeValue(flx_string(status[0]))));
+		vm->gc.add_var_root(http_version_var);
 
-		// remove scope
-		visitor->scopes[Constants::STD_NAMESPACE].pop_back();
+		auto status_var = std::make_shared<RuntimeVariable>("status", Type::T_INT);
+		status_var->set_value(vm->allocate_value(new RuntimeValue(flx_int(stoll(status[1])))));
+		vm->gc.add_var_root(status_var);
+
+		auto status_description_var = std::make_shared<RuntimeVariable>("status_description", Type::T_STRING);
+		status_description_var->set_value(vm->allocate_value(new RuntimeValue(flx_string(status[2]))));
+		vm->gc.add_var_root(status_description_var);
+
+		auto headers_var = std::make_shared<RuntimeVariable>("headers",
+			TypeDefinition(Type::T_STRUCT,
+				std::vector<size_t>{res_headers.size()},
+				Constants::DEFAULT_NAMESPACE,
+				Constants::BUILTIN_STRUCT_NAMES[BuiltinStructs::BS_ENTRY]
+			)
+		);
+		headers_var->set_value(headers_value);
+		vm->gc.add_var_root(headers_var);
+
+		auto data_var = std::make_shared<RuntimeVariable>("data", Type::T_STRING);
+		data_var->set_value(vm->allocate_value(new RuntimeValue(flx_string(res_body))));
+		vm->gc.add_var_root(data_var);
+
+		auto raw_var = std::make_shared<RuntimeVariable>("raw", Type::T_STRING);
+		raw_var->set_value(vm->allocate_value(new RuntimeValue(flx_string(raw_response))));
+		vm->gc.add_var_root(raw_var);
+
+		flx_struct res_str;
+		res_str["http_version"] = http_version_var;
+		res_str["status"] = status_var;
+		res_str["status_description"] = status_description_var;
+		res_str["headers"] = headers_var;
+		res_str["data"] = data_var;
+		res_str["raw"] = raw_var;
+
+		vm->push_new_constant(new RuntimeValue(res_str, Constants::STD_NAMESPACE, "HttpResponse"));
 
 		};
 
