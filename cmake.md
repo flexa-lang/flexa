@@ -1,14 +1,11 @@
-### **Commands:**
 ```bash
-# debug
-mkdir build-debug && cd build-debug
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+mkdir build && mkdir build/debug || mkdir build/debug && cd build/debug
+cmake -DCMAKE_BUILD_TYPE=Debug ../..
 
-# release
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release .. 
+mkdir build && mkdir build/release || mkdir build/release && cd build/release
+cmake -DCMAKE_BUILD_TYPE=Release ../..
 
-# compile
 make
 
+./flexa
 ```

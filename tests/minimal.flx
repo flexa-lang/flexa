@@ -1,0 +1,7 @@
+class A {
+  var x = 1;
+}
+
+fun main() {
+  var a = A();
+}
