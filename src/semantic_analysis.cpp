@@ -1613,6 +1613,12 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTClassDefinitionNode> astnode) {
 				decl->accept(this);
 			}
 
+			for (const auto& func : astnode->functions) {
+				if (func->identifier != "init") {
+					func->accept(this);
+				}
+			}
+
 			constructor->accept(this);
 
 			class_stack.pop();
