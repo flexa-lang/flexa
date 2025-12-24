@@ -1,0 +1,7 @@
+namespace lib2;
+
+fun fun2(f) {
+  println(this);
+  f();
+  println(f);
+}

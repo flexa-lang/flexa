@@ -1,0 +1,1705 @@
+
+
+class Super {
+	var foo;
+
+	init(foo) {
+		self.foo = foo;
+	}
+}
+
+class Foo {
+	var foo;
+
+	init(foo) {
+		self.foo = foo;
+	}
+}
+
+var clstest = "outside";
+
+class Test {
+	var sup: Foo;
+	var foo;
+	const const_var = "string";
+	var test = 10;
+	const const_2;
+
+	init() {
+		self.sup = Foo("init1");
+		println("init Test");
+		println(clstest);
+		foo = "foo";
+		const_2 = 3;
+	}
+
+	init(foo, test, const_2) {
+		self.sup = Foo("init2");
+		self.foo = foo;
+		self.test = test;
+		self.const_2 = const_2;
+	}
+
+	fun test() {
+		println(this);
+	}
+	
+	fun get_test() {
+		return test;
+	}
+
+	fun get_foo(): string {
+		return self.foo;
+	}
+
+	fun set_foo(foo: string) {
+		self.foo = foo;
+	}
+	
+	fun get_lambda() {
+		return lambda () {
+			println("lambda");
+		};
+	}
+	
+}
+
+// var cls = Test();
+var cls = Test("foo", 100, "const");
+cls.test();
+println(cls.foo);
+println(cls.const_var);
+println(cls.test);
+println(cls.const_2);
+cls.get_lambda()();
+println(cls.get_foo());
+cls.set_foo("bar");
+println(cls.get_foo());
+println(cls.sup.foo);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+fun test_scoped_class() {
+	struct Test2 {
+		var v;
+	}
+	class Test {
+		var v = 10;
+	}
+	println(Test());
+	println(Test2{v = 20});
+}
+
+test_scoped_class();
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+println(this);
+fun test_this_context() {
+	println(this);
+}
+test_this_context();
+class TestThisContext {
+	var test = this;
+	fun test() {
+		println(this);
+	}
+}
+TestThisContext().test();
+println(TestThisContext().test);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+struct FooAssignTest {
+var x;
+}
+
+class ClassAssignTest {
+	var foo: FooAssignTest;
+
+	init() {
+		foo = FooAssignTest{x=10};
+	}
+
+fun get_foo() {
+	return foo;
+}
+}
+
+var cls_assign_test = ClassAssignTest();
+
+println(cls_assign_test);
+
+cls_assign_test.get_foo().x = 20;
+
+println(cls_assign_test);
+
+cls_assign_test.get_foo() = FooAssignTest{x="new str"};
+
+println(cls_assign_test);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+struct ConstStruct {
+	const v;
+}
+
+var cstr = ConstStruct {v=10};
+// cstr.v = 20; // error
+println(cstr);
+
+const ccstr = ConstStruct {v=30};
+// ccstr = ConstStruct {v=40}; // error
+println(ccstr);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+var asd = 10;
+
+fun testimp(bnm = asd) {
+	println(bnm);
+}
+
+asd = 20;
+
+testimp();
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// const ccgh = readch();
+constexpr xcgh = 10;
+constexpr ycgh = 10 * 10;
+// constexpr z = readch();
+// constexpr x = c;
+// x = c;
+// c = x;
+// x = 10;
+// c = 10;
+
+// println(ccgh);
+println(xcgh);
+println(ycgh);
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+fun testl(a, [bar, qux]) {
+println(a);
+println(bar);
+println(qux);
+}
+
+fun testr([bar, qux], b) {
+println(bar);
+println(qux);
+println(b);
+}
+
+fun testb(a, [bar, qux], b) {
+println(a);
+println(bar);
+println(qux);
+println(b);
+}
+
+fun testu([bar, qux]) {
+println(bar);
+println(qux);
+}
+
+struct Foo_tests {
+	var bar: int;
+	var qux: string;
+}
+
+var fooba = Foo_tests{bar=5, qux="word"};
+
+println("--- functions ---");
+println("- testl -");
+testl(10, fooba);
+println("- testr -");
+testr(fooba, 20);
+println("- testb -");
+testb(10, fooba, 20);
+println("- test -");
+testu(fooba);
+println("-------------------");
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// using flx.std.types;
+
+// include namespace flx;
+
+struct Foox {
+	var x: int;
+	var y: int;
+}
+
+var loopstr = Foox{x=1, y=2};
+
+foreach (var it: Entry in loopstr) {
+	print("key: ", it.key, "\nvalue: ", it.value, "\ntype: ", typeof(it), '\n');
+}
+foreach (var it in loopstr) {
+	print("key: ", it.key, "\nvalue: ", it.value, "\ntype: ", typeof(it), '\n');
+}
+foreach (var [key, value] in loopstr) {
+	print("key: ", key, "\nvalue: ", value, '\n');
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+using lib1;
+
+include namespace lib1;
+
+lib1::fun1(lambda(){
+	println("this1");
+});
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+using flx.core.sys;
+using flx.core.os;
+
+println("sys:\n", flx::sys);
+println("sys.argv:\n", flx::sys.argv);
+// flx::sys.argv[0] = "";
+println("os:\n", flx::os);
+println("os.name: ", flx::os.name);
+println("os.cwd: ", flx::os.cwd);
+// flx::os.name = "";
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+fun ret_true() {
+println(this);
+return true;
+}
+
+fun ret_false() {
+println(this);
+return false;
+}
+
+if (ret_false() and ret_true()) {
+println("entered");
+} else {
+println("else");
+}
+
+if (ret_true() or ret_false()) {
+println("entered");
+} else {
+println("else");
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+struct FunStruct {
+var inits: function;
+var ret_fun: function;
+var ret_str_fun: function;
+}
+
+var fstr = FunStruct {
+inits = lambda () {
+	println("level 1 init1: ", this);
+},
+ret_fun = lambda () {
+	println("level 1 ret_fun1: ", this);
+	return lambda () {
+	println("level 2 lambda1: ", this);
+	};
+},
+ret_str_fun = lambda () {
+	println("level 1 ret_str_fun1: ", this);
+	return FunStruct {
+	inits = lambda () {
+		println("level 2 lambda2: ", this);
+	},
+	ret_fun = lambda () {
+		println("level 2 ret_fun2: ", this);
+		return lambda () {
+		println("level 2 lambda3: ", this);
+		};
+	}
+	};
+}
+};
+
+fstr.inits();
+// level 1 init1: cc745b71-426e-13e6-2a0c-b242e4510643
+println("---");
+
+fstr.ret_fun()();
+// level 1 ret_fun1: b77df59e-f92b-2052-51ad-300e924926d3
+// level 2 lambda1: b77df59e-f92b-2052-51ad-300e924926d3
+println("---");
+
+fstr.ret_str_fun().inits();
+// level 1 ret_str_fun1: b77df59e-f92b-2052-51ad-300e924926d3
+// level 2 lambda2: b77df59e-f92b-2052-51ad-300e924926d3
+println("---");
+
+fstr.ret_str_fun().ret_fun()();
+// level 1 ret_str_fun1: b77df59e-f92b-2052-51ad-300e924926d3
+// level 2 ret_fun2: b77df59e-f92b-2052-51ad-300e924926d3
+// level 2 lambda3: b77df59e-f92b-2052-51ad-300e924926d3
+println("---");
+
+fun to_ret_fun1() {
+println(this);
+}
+
+var to_ret_fun2 = lambda () {
+println(this);
+};
+
+fun ret_fun1() {
+to_ret_fun2();
+return to_ret_fun1;
+}
+
+ret_fun1()();
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+struct TestStack {
+var arr;
+}
+
+fun push(s, v) {
+s.arr += { v };
+}
+
+fun stack_ref(s) {
+return s.arr;
+}
+
+fun peek(s) {
+return s.arr[len(s.arr) - 1];
+}
+
+var sarr = TestStack{arr={}};
+var q = 1;
+var v = 2;
+
+println("refid(q)=", refid(q));
+println("refid(v)=", refid(v));
+
+push(sarr, q);
+
+println("after q ", refid(peek(sarr)));
+println("peek ", peek(sarr));
+
+// var pv = peek(sarr);
+// pv += { v };
+stack_ref(sarr) += { v };
+
+println("after v ", refid(peek(sarr)));
+println("peek ", peek(sarr));
+
+println(sarr);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+struct Container {
+var value;
+}
+
+fun gets(s) {
+return s.value;
+}
+
+// array
+var arrc = Container{value={}};
+
+gets(arrc) += { 1 };
+gets(arrc) += { 2 };
+gets(arrc) += { 3 };
+
+println({gets(arrc)});
+println(gets(arrc)[0]);
+println(gets(arrc)[1]);
+println(gets(arrc)[2]);
+
+gets(arrc)[1] = 666;
+
+println({gets(arrc)});
+
+
+// /////////////////////////////////////////////////////////////////////////////////////////////
+
+// string
+var strc = Container{value=""};
+
+gets(strc) += "a";
+gets(strc) += "b";
+gets(strc) += "c";
+
+println({gets(strc)});
+println(gets(strc)[0]);
+println(gets(strc)[1]);
+println(gets(strc)[2]);
+
+gets(strc)[1] = 'z';
+
+println({gets(strc)});
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// struct
+var structc = Container{value=Container{value={}}};
+
+gets(structc).value += {"a"};
+gets(structc).value += {"b"};
+gets(structc).value += {"c"};
+
+println({gets(structc).value});
+println(gets(structc).value[0]);
+println(gets(structc).value[1]);
+println(gets(structc).value[2]);
+
+gets(structc).value[1] = 'z';
+
+println({gets(structc).value});
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// int
+var intc = Container{value=0};
+
+gets(intc) += 6;
+gets(intc) += 60;
+gets(intc) += 600;
+
+println({gets(intc)});
+println(gets(intc) % 660);
+println(gets(intc) % 606 / 10);
+println(gets(intc) % 066);
+
+gets(intc) = 333;
+
+println({gets(intc)});
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+var arr: int[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+var i: int = 0;
+
+print("for ");
+for (var i: int = 0; i < len(arr); i++) {
+	if (arr[i] % 2 == 0) {
+		print("*");
+		continue;
+	}
+	print(arr[i]);
+}
+println();
+
+print("for;; ");
+i = -1;
+for (;;) {
+	i++;
+	if (i % 2 == 0) {
+		print("*");
+		continue;
+	}
+	print(i);
+	if (i >= 9) {
+	break;
+	}
+}
+println();
+
+print("foreach ");
+foreach (var val in arr) {
+	if (val % 2 == 0) {
+		print("*");
+		continue;
+	}
+	print(val);
+}
+println();
+
+i = -1;
+print("while ");
+while (true) {
+	i++;
+	if (i % 2 == 0) {
+		print("*");
+		continue;
+	}
+	print(i);
+	if (i >= 9) {
+	break;
+	}
+}
+println();
+
+i = -1;
+print("do-while ");
+do {
+	i++;
+	if (i % 2 == 0) {
+		print("*");
+		continue;
+	}
+	print(i);
+	if (i >= 9) {
+	break;
+	}
+} while (true);
+println();
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// var arr: int[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+// var i: int = 0;
+
+print("for ");
+for (var i: int = 0; i < len(arr); i = i + 1) {
+	print(arr[i]);
+	if (arr[i] == 7) {
+		println(" break");
+		break;
+	}
+}
+
+print("for;; ");
+i = 0;
+for (;;) {
+	print(i);
+	if (i == 7) {
+	println(" break");
+	break;
+	}
+	i++;
+}
+
+print("foreach ");
+foreach (var val in arr) {
+	print(val);
+	if (val == 7) {
+		println(" break");
+		break;
+	}
+}
+
+i = 0;
+print("while ");
+while (true) {
+	print(i);
+	if (i == 7) {
+	println(" break");
+	break;
+	}
+	i++;
+}
+
+i = 0;
+print("do-while ");
+do {
+	print(i);
+	if (i == 7) {
+	println(" break");
+	break;
+	}
+	i++;
+} while (true);
+
+switch (1) {
+case 1:
+	println("case 1");
+case 2:
+	println("case 2");
+	break;
+default:
+	println("default");
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+fun aaa() {
+	print("aaa");
+}
+
+aaa();
+
+var f = lambda () {
+	println('f');
+};
+
+f();
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+fun func_test() {
+println("called ", this);
+}
+fun args(...args) {
+	foreach (var v in args) {
+	print(v);
+	}
+	println();
+}
+fun func_test2(): int {
+	return 0;
+}
+fun func_test3(): int[3] {
+	return { 1, 2, 3 };
+}
+fun func_test4(): int[3][3] {
+	return { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } };
+}
+fun func_test5(): int[3][3][3] {
+	return { { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } }, { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } }, { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } } };
+}
+
+fun func_test6(a, b: int, c: any, d:[3], e: int[3], f:[3][3], h:[3][3][3]={ { { 9,9,9 }, { 9,9,9 }, { 9,9,9 } }, { { 9,9,9 }, { 9,9,9 }, { 9,9,9 } }, { { 9,9,9 }, { 9,9,9 }, { 9,9,9 } } }) {
+println(a);
+println(b);
+println(c);
+println(d);
+println(e);
+println(f);
+println(h);
+}
+
+func_test();
+args("print", ' ', "all", " ", 6, " args");
+println(func_test2());
+println(func_test3()[0]);
+println(func_test4()[0][1]);
+println(func_test5()[0][1][2]);
+func_test6("any", 10, 10.01, func_test3(), func_test3(), func_test4(), func_test5());
+func_test6("any", 10, 10.01, { 1, 2, 3 }, { 1, 2, 3 }, { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } });
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+struct StrArrInit {
+var test;
+var arr_init_u: [10];
+var arr_init_v: [10];
+}
+
+var str_arr_init = StrArrInit {
+test="test",
+arr_init_u={},
+arr_init_v={0}
+};
+
+println(str_arr_init);
+
+var arr_init_u: [10] = {};
+var arr_init_v: [10] = {0};
+
+println(arr_init_u);
+println(arr_init_v);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+println(typeof(bool));
+println(typeof(int));
+println(typeof(float));
+println(typeof(char));
+println(typeof(string));
+println(typeof(function));
+
+println(typeof(bool[]));
+println(typeof(int[][]));
+println(typeof(float[10]));
+println(typeof(char[10][10]));
+println(typeof(string[10][]));
+println(typeof(function[][10]));
+
+struct TypeStrTest {
+var x: int;
+var y: int;
+}
+
+println(typeof(TypeStrTest));
+println(typeof(TypeStrTest[]));
+println(typeof(TypeStrTest[][]));
+println(typeof(TypeStrTest[10]));
+println(typeof(TypeStrTest[10][10]));
+println(typeof(TypeStrTest[10][]));
+println(typeof(TypeStrTest[][10]));
+
+var type_str_test1 = {0, 1, 2};
+var type_str_test2 = {{0, 1, 2}, {0, 1, 2}, {0, 1, 2}};
+var type_str_test3 = {{{0, 1, 2}, {0, 1, 2}, {0, 1, 2}}, {{0, 1, 2}, {0, 1, 2}, {0, 1, 2}}, {{0, 1, 2}, {0, 1, 2}, {0, 1, 2}}};
+
+println(typeof(type_str_test1), typeof(type_str_test2), typeof(type_str_test3));
+println(typeof(type_str_test1[0]), typeof(type_str_test2[0]), typeof(type_str_test3[0]));
+println(typeof(type_str_test2[0][0]), typeof(type_str_test3[0][0]));
+println(typeof(type_str_test3[0][0][0]));
+
+println(is_any(type_str_test1), is_any(type_str_test2), is_any(type_str_test3));
+println(is_array(type_str_test1), is_array(type_str_test2), is_array(type_str_test3));
+println(is_struct(type_str_test1), is_struct(type_str_test2), is_struct(type_str_test3));
+
+var type_str_test4 = {TypeStrTest{x=0, y=1}, TypeStrTest{x=0, y=1}, TypeStrTest{x=0, y=1}};
+var type_str_test5 = {{TypeStrTest{x=0, y=1}, TypeStrTest{x=0, y=1}, TypeStrTest{x=0, y=1}}, {TypeStrTest{x=0, y=1}, TypeStrTest{x=0, y=1}, TypeStrTest{x=0, y=1}}, {TypeStrTest{x=0, y=1}, TypeStrTest{x=0, y=1}, TypeStrTest{x=0, y=1}}};
+
+println(typeof(type_str_test4), typeof(type_str_test5));
+println(is_any(type_str_test4), is_any(type_str_test5));
+println(is_array(type_str_test4), is_array(type_str_test5));
+println(is_struct(type_str_test4), is_struct(type_str_test5));
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+fun test(){
+println(this);
+}
+println(this);
+test();
+println(this);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+print(0 in {0, 1, 2});
+print("\n");
+print(1 in {0, 1, 2});
+print("\n");
+print(2 in {0, 1, 2});
+print("\n");
+print(-1 in {0, 1, 2});
+print("\n");
+print(3 in {0, 1, 2});
+print("\n");
+print(20 in {0, 1, 2});
+print("\n");
+
+print({0, 1, 2} in {{0, 1, 2}, {1, 1, 2}, {2, 1, 2}});
+print("\n");
+print({1, 1, 2} in {{0, 1, 2}, {1, 1, 2}, {2, 1, 2}});
+print("\n");
+print({2, 1, 2} in {{0, 1, 2}, {1, 1, 2}, {2, 1, 2}});
+print("\n");
+
+print({0, 1, 3} in {{0, 1, 2}, {1, 1, 2}, {2, 1, 2}});
+print("\n");
+print({1, 1, 3} in {{0, 1, 2}, {1, 1, 2}, {2, 1, 2}});
+print("\n");
+print({2, 1, 3} in {{0, 1, 2}, {1, 1, 2}, {2, 1, 2}});
+print("\n");
+
+struct Foo_in {
+	var a: int;
+	var s: string;
+}
+
+var str1: Foo_in = Foo_in{a=10, s="str"};
+var str1p = str1;
+var str2: Foo_in = Foo_in{a=10, s="str"};
+
+// print(str1 == str2);
+
+// has pointer
+print(str1 in {Foo_in{a=1, s="aa"}, str1p, Foo_in{a=2, s="aa"}});
+print("\n");
+// has value but no val access
+print(str1 in {Foo_in{a=10, s="str"}, Foo_in{a=10, s="str"}, Foo_in{a=10, s="str"}});
+print("\n");
+// has value
+print(str1 in {Foo_in{a=10, s="str"}, Foo_in{a=10, s="str"}, Foo_in{a=10, s="str"}});
+print("\n");
+
+// strings
+print("strings\n\n");
+// match
+print("match:\n");
+print("0" in "012");
+print("\n");
+print("1" in "012");
+print("\n");
+print("2" in "012");
+print("\n");
+print("01" in "012");
+print("\n");
+print("012" in "012");
+print("\n");
+print("12" in "012");
+print("\n\n");
+// dont match
+print("dont match:\n");
+print("-0" in "012");
+print("\n");
+print("3" in "012");
+print("\n");
+print("9" in "012");
+print("\n");
+print("10" in "012");
+print("\n");
+print("-0123" in "012");
+print("\n");
+print("22" in "012");
+print("\n\n");
+
+// char
+print("chars\n\n");
+// match
+print("match:\n");
+print('0' in "012");
+print("\n");
+print('1' in "012");
+print("\n");
+print('2' in "012");
+print("\n\n");
+// match
+print("dont match:\n");
+print('\0' in "012");
+print("\n");
+print('\n' in "012");
+print("\n");
+print('3' in "012");
+print("\n\n");
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+fun ternary_false() {
+	println("false");
+	return false;
+}
+fun ternary_true() {
+	println("true");
+	return true;
+}
+var ternary_result = false ? ternary_true() : ternary_false();
+println(ternary_result);
+
+println(false ? 10 : 5);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+println("is array ", is_array({1, 2, 3}));
+
+var a = {1, 2, 3};
+println("is undeclared any array ", is_array(a));
+
+var b: int[] = {1, 2, 3};
+println("is unsized int array ", is_array(a));
+
+var c: int[3] = {1, 2, 3};
+println("is sized int array ", is_array(a));
+
+struct A {
+	var a: int[];
+	var b: float[3];
+	var c;
+}
+
+var d = A{a={1, 2, 3}, b={1.1, 2.2, 3.3}, c={'a', 0}};
+
+println("is struct with array ", is_array(d.a));
+println("is struct with array ", is_array(d.b));
+println("is struct with array ", is_array(d.c));
+println("is not array ", is_array(666));
+println("is not array ", is_array(6.66));
+println("is not array ", is_array('c'));
+println("is not array ", is_array("string"));
+println("is not array ", is_array(false));
+println("is not array ", is_array(true));
+
+struct S {
+	var a: int;
+	var b: float;
+	var c: char;
+	var d: string;
+	var e: bool;
+}
+
+var s = S{a=666, b=6.66, c='c', d="string", e=true};
+
+println("is not array ", is_array(s));
+println("is not array ", is_array(s.a));
+println("is not array ", is_array(s.b));
+println("is not array ", is_array(s.c));
+println("is not array ", is_array(s.d));
+println("is not array ", is_array(s.e));
+println("is not any ", is_any({1, 2, 3}));
+println("is not any ", is_any(666));
+println("is not any ", is_any(6.66));
+println("is not any ", is_any('c'));
+println("is not any ", is_any("string"));
+println("is not any ", is_any(false));
+println("is not any ", is_any(true));
+
+struct T {
+	var a: int;
+	var b: float;
+	var c: char;
+	var d: string;
+	var e: bool;
+}
+
+var t = T{a=666, b=6.66, c='c', d="string", e=true};
+
+println("is struct ", is_struct(t));
+println("is not struct ", is_struct(t.a));
+println("is not struct ", is_struct(t.b));
+println("is not struct ", is_struct(t.c));
+println("is not struct ", is_struct(t.d));
+println("is not struct ", is_struct(t.e));
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+var test3: [10];
+
+var test4: int[3][3];
+
+var test1: [] = {
+1, 2, 3, 4, 5, 6, 7
+};
+
+var test2: [][] = {
+{ 1, 2, 3 },
+{ 1, 2, 3 },
+{ 1, 2, 3 }
+};
+
+// do not print because it's undefined
+// print(test3);
+// print('\n');
+// print(test4);
+// print('\n');
+print(test1);
+print('\n');
+print(test2);
+print('\n');
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+var id1;
+var id2: int;
+var id3: [3];
+var id4: [3][3];
+var id5: [3][3][3];
+var id6: int[3];
+var id7: int[3][3];
+var id8: int[3][3][3];
+
+print("any receiving any value:\n");
+id1 = 10;
+print(id1);
+print("\n");
+id1 = { 1, 2, 3 };
+print(id1);
+print("\n");
+id1 = { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } };
+print(id1);
+print("\n");
+id1 = { { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } }, { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } }, { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } } };
+print(id1);
+print("\n");
+print("\n");
+
+id1 = 10;
+id2 = 10;
+id3 = { 1, 2, 3 };
+id4 = { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } };
+id5 = { { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } }, { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } }, { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } } };
+id6 = { 1, 2, 3 };
+id7 = { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } };
+id8 = { { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } }, { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } }, { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } } };
+
+print("type receiving actual:\n");
+print(id1);
+print("\n");
+print(id2);
+print("\n");
+print(id3);
+print("\n");
+print(id4);
+print("\n");
+print(id5);
+print("\n");
+print(id6);
+print("\n");
+print(id7);
+print("\n");
+print(id8);
+print("\n");
+print("\n");
+
+id3[0] = 99;
+id4[1][2] = 99;
+id5[1][0][1] = 99;
+id6[1] = 99;
+id7[1][2] = 99;
+id8[1][0][1] = 99;
+
+print("array assigning positions:\n");
+print(id3);
+print("\n");
+print(id4);
+print("\n");
+print(id5);
+print("\n");
+print(id6);
+print("\n");
+print(id7);
+print("\n");
+print(id8);
+print("\n");
+print("\n");
+
+id4[1] = { 99, 99, 99 };
+id5[1][0] = { 99, 99, 99 };
+id7[1] = { 99, 99, 99 };
+id8[1][0] = { 99, 99, 99 };
+
+print("array assigning subarrays:\n");
+print(id4);
+print("\n");
+print(id5);
+print("\n");
+print(id6);
+print("\n");
+print(id7);
+print("\n");
+print(id8);
+print("\n");
+print("\n");
+
+id5[1] = { { 99, 99, 99 }, { 99, 99, 99 }, { 99, 99, 99 } };
+id8[1] = { { 99, 99, 99 }, { 99, 99, 99 }, { 99, 99, 99 } };
+
+print("array assigning subarrays 2:\n");
+print(id5);
+print("\n");
+print(id8);
+print("\n");
+print("\n");
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// using flx.std.types;
+
+try {
+	print("executed try\n");
+	var a = 10/0;
+	print("after division");
+} catch (ex: Exception) {
+	print("executed catch\n");
+	print("generated error: " + ex.error);
+}
+
+try {
+	var v : string[] = {"12", 34, '5', 6789f};
+}
+catch ([error, code]) {
+	println("IT SHOULD'T PRINT: ", error);
+}
+
+try {
+	println("executed try");
+	var a = 10/1;
+	throw "test";
+	println("after division");
+} catch ([a, b]) {
+	println("executed catch");
+	println("generated error: <", a, ">:<", b, ">\n");
+}
+println();
+
+var ix = 0;
+try {
+	ix = 10 / 0;
+	println(ix);
+}catch([a, b]){
+	println(a);
+}
+println(ix);
+println();
+
+print(ix);
+
+try {
+	println("try");
+	println(10/0);
+} catch (...) {
+	println("catch");
+}
+
+println("end");
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+println("Hello world!");
+
+var u = 10 + 5;
+
+print(u, '\n');
+
+println("defining testx");
+
+fun testx() {
+print("print inside ", this, '\n');
+}
+
+println("testx defined and call");
+
+testx();
+
+println("printed");
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+struct UnpackTest {
+var x;
+var y;
+}
+
+// var unpack_test = UnpackTest{x=1,y=2};
+
+// var [x, y] = unpack_test;
+
+// println('[', x, ",", y, ']');
+
+struct Foo {
+var ut: UnpackTest;
+}
+
+var foo = Foo{ut=UnpackTest{x=1,y=2}};
+
+var [x, y] = foo.ut;
+
+println('[', x, ",", y, ']');
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+if (false) {
+	println("if");
+} else if (false) {
+	println("else if 1");
+} else if (false) {
+	println("else if 2");
+} else if (false) {
+	println("else if 3");
+} else {
+	println("else");
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+switch(99) {
+case 0:
+case 1:
+	print(1);
+	break;
+case 2: {
+	print(2);
+	break;
+	print(99);
+}   
+case 3:
+	print(3);
+case 4:
+	print(4);
+	break;
+case 5:
+	print(5);
+	break;
+default:
+	print("default");
+	break;
+}
+
+switch(6) {
+case 0:
+case 1:
+	print(1);
+	break;
+case 2: {
+	print(2);
+	break;
+}   
+case 3:
+	print(3);
+case 4:
+	print(4);
+	break;
+case 5:
+	print(5);
+	break;
+}
+
+print("\n\n");
+
+var test = 0;
+const F0 = 0;
+
+switch(test) {
+case F0:
+	print(0);
+	break;
+case 1:
+	print(1);
+	break;
+case 2: {
+	print(2);
+	break;
+	print(99);
+}   
+case 3:
+	print(3);
+case 4:
+	print(4);
+	break;
+case 5:
+	print(5);
+	break;
+default:
+	print("default");
+	break;
+}
+println();
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+for (var i = 0; i < 1000; i++){
+print(i);
+}
+print('\n');
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+var n;
+
+n = 10;
+n += 10;
+n += 10;
+
+print(n);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+include namespace flx;
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+using flx.core.sound;
+
+if (os.name == "windows") {
+	set_volume(1f);
+	println("Starting guitar");
+	play_sound("./libs/core/guitar.wav");
+	// sleep(5000);
+	println("Starting music");
+	play_sound("./libs/core/sadness.wav");
+	// sleep(5000);
+	println("Setting midle volume");
+	set_volume(0.5);
+	// sleep(3000);
+	println("Setting no volume");
+	set_volume(0f);
+	// sleep(3000);
+	println("Setting full volume");
+	set_volume(1f);
+	// sleep(3000);
+	println("Stopping");
+	stop_sound();
+	println("Play in loop");
+	play_sound("./libs/core/water.wav");
+	// sleep(3000);
+	println("Play once");
+	play_sound_once("./libs/core/water.wav");
+	// sleep(1000);
+
+} else {
+	println("Sound is only for Windows OS");
+
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+using flx.core.input;
+
+fun test_key_press() {
+	println("Press 'A' to continue...");
+	while (not is_key_pressed(KEY_A)) {}
+	println("Key 'A' pressed!\n");
+	
+	println("Press NumPad0 to continue...");
+	while (not is_key_pressed(KEY_NUMPAD_0)) {}
+	println("Key NumPad0 pressed!\n");
+
+	println("Press NumPad0 F1 continue...");
+	while (not is_key_pressed(KEY_F1)) {}
+	println("Key F1 pressed!\n");
+}
+
+fun test_mouse_position() {
+	println("Move the mouse to change its position...");
+	println("Press ESC to stop");
+	var pos = get_mouse_position();
+	while (not is_key_pressed(KEY_ESC)) {
+		var new_pos = get_mouse_position();
+		if (new_pos.x != pos.x or new_pos.y != pos.y) {
+			println("Mouse moved to position: ", new_pos.x, ", ", new_pos.y);
+			pos = new_pos;
+		}
+	}
+	println();
+}
+
+fun test_mouse_position_set() {
+	set_mouse_position(int(1920/2), int(1080/2));
+	println("Mouse moved to center\n");
+}
+
+fun test_mouse_click() {
+	println("Click the left mouse button to continue...");
+	while (not is_mouse_button_pressed(MOUSE_LEFT_BUTTON)) {}
+	println("Mouse left button clicked!\n");
+	println("Click the right mouse button to continue...");
+	while (not is_mouse_button_pressed(MOUSE_RIGHT_BUTTON)) {}
+	println("Mouse right button clicked!\n");
+	println("Click the middle mouse button to continue...");
+	while (not is_mouse_button_pressed(MOUSE_MIDDLE_BUTTON)) {}
+	println("Mouse middle button clicked!\n");
+}
+
+fun run_all_tests() {
+	// test_key_press();
+	// test_mouse_position();
+	test_mouse_position_set();
+	// test_mouse_click();
+}
+
+if (os.name == "windows") {
+	run_all_tests();
+
+} else {
+	println("Input are only for Windows OS\n");
+
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+using flx.core.HTTP;
+
+var config = HttpRequest {
+	hostname="example.com",
+	method=GET
+};
+
+try {
+	var res = request(config);
+
+	println("Response:");
+	println("--------------------------------------------");
+	println("http_version: ", res.http_version);
+	println("--------------------------------------------");
+	println("status: ", res.status);
+	println("--------------------------------------------");
+	println("status_description: ", res.status_description);
+	println("--------------------------------------------");
+	println("Headers:");
+	foreach (var res in res.headers) {
+		println(res.key, ": ", res.value);
+	}
+	println("--------------------------------------------");
+	println("data:\n", res.data, "\n");
+	println("--------------------------------------------");
+	println("raw:\n", res.raw);
+	println("--------------------------------------------");
+
+} catch (ex: Exception) {
+	println("HTTP request failed: ", ex.error);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+using flx.core.gc;
+
+gc_enable(false);
+
+println(gc_is_enabled());
+
+var ax = 0;
+while (true) {
+ax += 1;
+
+if (ax >= 2000) {
+	break;
+}
+}
+
+// system("pause");
+
+gc_collect();
+
+// system("pause");
+
+gc_enable(true);
+
+println(gc_is_enabled());
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+using flx.core.files;
+
+var file: flx::File = flx::open("./doc.txt", flx::MODE_READ);
+
+println("readed text: ", flx::read(file));
+
+flx::close(file);
+
+var file2: flx::File = flx::open("./doc2.txt", flx::MODE_WRITE);
+
+flx::write(file2, "this was write using flx files lib");
+flx::close(file2);
+
+var file3: flx::File = flx::open("./doc2.txt", flx::MODE_READ);
+
+println("readed from writed file: ", flx::read(file3));
+flx::close(file3);
+
+if (not flx::path_exists("./created")) {
+flx::create_dir("./created");
+flx::create_dir("./created/sub1/sub");
+flx::create_dir("./created/sub2");
+}
+
+println(flx::is_file("./created"));
+println(flx::is_file("./doc2.txt"));
+
+println(flx::is_dir("./created"));
+println(flx::is_dir("./doc2.txt"));
+
+foreach (var entry in flx::list_dir(".")) {
+	println(entry);
+}
+
+println(flx::path_exists("./created"));
+println(flx::path_exists("./doc2.txt"));
+println(flx::path_exists("./created/sub3"));
+println(flx::path_exists("./doc3.txt"));
+
+
+flx::create_dir("./created2");
+flx::create_dir("./created2/sub1/sub");
+flx::create_dir("./created2/sub2");
+flx::delete_path("./created2");
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+using flx.core.datetime;
+
+// defaults UTC
+var dt = create_date_time();
+
+println("generated date: ", dt);
+
+var dtnl = create_date_time(1900, 1, 1, 0, 0, 0);
+
+println("null date: ", dtnl);
+
+println("diff: ", diff_date_time(dt, dtnl));
+
+println("format_date_time: ", format_date_time(dt, "%Y-%m-%d %H:%M:%S"));
+println("format_local_date_time: ", format_local_date_time(dt, "%Y-%m-%d %H:%M:%S"));
+println("ascii_date_time: ", ascii_date_time(dt));
+println("ascii_local_date_time: ", ascii_local_date_time(dt));
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+using flx.core.console;
+
+print("[ ] Testing colors\n");
+println("visible: ", is_console_visible());
+set_console_font("Arial", 0, 24);
+
+for(var k = 0; k < 16; k++) {
+for(var j = 0; j < 16; j++) {
+	set_console_color(k, j);
+	print('['+string(k)+","+string(j)+"] Testing colors\n");
+}
+}
+
+set_console_font("Consolas", 0, 16);
+set_console_color(0, 7);
+print("[0,7] Testing color default\n");
+set_console_color(1, 7);
+print("[1,7] Testing color default\n");
+set_console_color(2, 7);
+print("[2,7] Testing color default\n");
+set_console_color(CL_BRIGHT_WHITE, CL_BLACK);
+print("[2,7] Testing color default\n");
+
+show_console(false);
+// set_console_cursor_position(0, 0);
+show_console(true);
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+using flx.core.graphics;
+
+if (os.name == "windows") {
+	println("starting graphics test-------------------------------------------------------------");
+
+	var window1: flx::Window = flx::create_window("Flexa Graphics 1", 800, 450);
+	var window2: flx::Window = flx::create_window("Flexa Graphics 2", 400, 225);
+	var img1: flx::Image = flx::load_image("./logo.bmp");
+	var img2: flx::Image = flx::load_image("./logo-old.bmp");
+	var font: flx::Font = flx::create_font();
+	var font2: flx::Font = flx::create_font(30, "Arial", 0, false, false, true);
+
+	var fontsize = flx::get_text_size(window2, "center text", font2);
+	var fw = fontsize.width;
+	var fh = fontsize.height;
+	var ww = window2.width;
+	var wh = window2.height;
+
+	while (not flx::is_quit(window1) or not flx::is_quit(window2)) {
+		if (not flx::is_quit(window1)) {
+			flx::clear_screen(window1, flx::Color{r=0,g=0,b=0});
+
+			flx::draw_pixel(window1, 100, 50, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 101, 50, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 102, 50, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 103, 50, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 104, 50, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 105, 50, flx::Color{r=255,g=0,b=0});
+			
+			flx::draw_pixel(window1, 105, 51, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 105, 52, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 105, 53, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 105, 54, flx::Color{r=255,g=0,b=0});
+
+			flx::draw_pixel(window1, 100, 55, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 101, 55, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 102, 55, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 103, 55, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 104, 55, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 105, 55, flx::Color{r=255,g=0,b=0});
+			
+			flx::draw_pixel(window1, 100, 51, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 100, 52, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 100, 53, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window1, 100, 54, flx::Color{r=255,g=0,b=0});
+
+			flx::draw_line(window1, 90, 40, 600, 80, flx::Color{r=0,g=255,b=0});
+
+			flx::draw_rect(window1, 500, 200, 100, 80, flx::Color{r=0,g=255,b=255});
+			flx::fill_rect(window1, 200, 200, 100, 80, flx::Color{r=0,g=0,b=255});
+
+			flx::draw_circle(window1, 375, 100, 50, flx::Color{r=255,g=255,b=0});
+			flx::fill_circle(window1, 375, 300, 50, flx::Color{r=255,g=0,b=255});
+
+			flx::update(window1);
+		}
+		else {
+			flx::destroy_window(window1);
+		}
+		if (not flx::is_quit(window2)) {
+			flx::clear_screen(window2, flx::Color{r=0,g=0,b=0});
+			flx::fill_rect(window2, 5, 5, flx::get_current_width(window2) - 10, flx::get_current_height(window2) - 10, flx::Color{r=255,g=0,b=0});
+			flx::draw_pixel(window2, 100, 50, flx::Color{r=255,g=255,b=255});
+			flx::draw_image(window2, img1, 150, 50);
+			flx::draw_image(window2, img2, 230, 100);
+			flx::draw_text(window2, 0, 0, "test", flx::Color{r=255,g=255,b=255}, font);
+			flx::draw_text(window2, int(flx::get_current_width(window2) / 2 - fw / 2), int(flx::get_current_height(window2) / 2 - fh / 2), "center text", flx::rgb(0, 255, 0), font2);
+			flx::update(window2);
+		}
+		else {
+			flx::destroy_window(window2);
+		}
+	}
+
+	flx::destroy_window(window1);
+	flx::destroy_window(window2);
+
+ } else {
+	println("Graphics is only available on Windows OS.");
+
+}

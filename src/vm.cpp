@@ -632,10 +632,6 @@ void VirtualMachine::handle_call() {
 	auto curr_col = dbg_info.col;
 	RuntimeValue* returned_expression_value = nullptr;
 
-	if (identifier == "gc_collect") {
-		int x = 0;
-	}
-
 	// if identifier is empty, it means that the call is a lambda function
 	if (identifier.empty()) {
 		returned_expression_value = get_evaluation_stack_top();

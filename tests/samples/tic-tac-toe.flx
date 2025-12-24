@@ -1,0 +1,228 @@
+using flx.core.graphics;
+using flx.core.console;
+using flx.core.input;
+using flx.core.datetime;
+using flx.std.math;
+
+// --------------------------------------------------
+// Game constants
+// --------------------------------------------------
+const BOARD_SIZE = 3;
+const CELL_SIZE = 120;
+
+// --------------------------------------------------
+// Colors
+// --------------------------------------------------
+var color_black = flx::rgb(0, 0, 0);
+var color_white = flx::rgb(255, 255, 255);
+var color_gray  = flx::rgb(200, 200, 200);
+var color_red   = flx::rgb(220, 50, 50);
+var color_blue  = flx::rgb(50, 50, 220);
+
+// --------------------------------------------------
+// Game window and fonts
+// --------------------------------------------------
+var game_window: flx::Window = null;
+var font_large = flx::create_font(48);
+var font_small = flx::create_font(22);
+
+// --------------------------------------------------
+// TicTacToe game class
+// --------------------------------------------------
+class TicTacToe {
+	var board: int[3][3] = { 0 };
+	var current_player: int;
+	var game_over: bool;
+	var winner: int;
+
+	// Called automatically when creating the object
+	init() {
+		reset();
+	}
+
+	// Reset the game state
+	fun reset() {
+		for (var i = 0; i < BOARD_SIZE; i++) {
+			for (var j = 0; j < BOARD_SIZE; j++) {
+				self.board[i][j] = 0;
+			}
+		}
+
+		self.current_player = 1; // 1 = X, 2 = O
+		self.game_over = false;
+		self.winner = 0;
+	}
+
+	// Handle mouse click on the board
+	fun handle_click(mx: int, my: int) {
+		if (self.game_over) {
+			return;
+		}
+
+		var col: int = int(mx / CELL_SIZE);
+		var row: int = int(my / CELL_SIZE);
+
+		if (col < 0 or col >= BOARD_SIZE or row < 0 or row >= BOARD_SIZE) {
+			return;
+		}
+
+		if (self.board[row][col] != 0) {
+			return;
+		}
+
+		self.board[row][col] = self.current_player;
+
+		if (check_winner()) {
+			self.game_over = true;
+			self.winner = self.current_player;
+			return;
+		}
+
+		if (is_draw()) {
+			self.game_over = true;
+			self.winner = 0;
+			return;
+		}
+
+		switch_player();
+	}
+
+	// Switch between X and O
+	fun switch_player() {
+		self.current_player = self.current_player == 1 ? 2 : 1;
+	}
+
+	// Check if the current player won
+	fun check_winner(): bool {
+		// Rows
+		for (var i = 0; i < 3; i++) {
+			if (self.board[i][0] != 0 and
+				self.board[i][0] == self.board[i][1] and
+				self.board[i][1] == self.board[i][2]) {
+				return true;
+			}
+		}
+
+		// Columns
+		for (var j = 0; j < 3; j++) {
+			if (self.board[0][j] != 0 and
+				self.board[0][j] == self.board[1][j] and
+				self.board[1][j] == self.board[2][j]) {
+				return true;
+			}
+		}
+
+		// Diagonals
+		if (self.board[0][0] != 0 and
+			self.board[0][0] == self.board[1][1] and
+			self.board[1][1] == self.board[2][2]) {
+			return true;
+		}
+
+		if (self.board[0][2] != 0 and
+			self.board[0][2] == self.board[1][1] and
+			self.board[1][1] == self.board[2][0]) {
+			return true;
+		}
+
+		return false;
+	}
+
+	// Check if the board is full
+	fun is_draw(): bool {
+		for (var i = 0; i < 3; i++) {
+			for (var j = 0; j < 3; j++) {
+				if (self.board[i][j] == 0) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	// Render the board and UI
+	fun render() {
+		// Draw grid
+		for (var i = 0; i < BOARD_SIZE; i++) {
+			for (var j = 0; j < BOARD_SIZE; j++) {
+				var x = j * CELL_SIZE;
+				var y = i * CELL_SIZE;
+
+				flx::fill_rect(game_window, x, y, CELL_SIZE, CELL_SIZE, color_gray);
+				flx::draw_rect(game_window, x, y, CELL_SIZE, CELL_SIZE, color_black);
+
+				if (self.board[i][j] == 1) {
+					flx::draw_text(game_window, x + 40, y + 25, "X", color_red, font_large);
+				}
+				else if (self.board[i][j] == 2) {
+					flx::draw_text(game_window, x + 40, y + 25, "O", color_blue, font_large);
+				}
+			}
+		}
+
+		// Status text
+		var status_y = BOARD_SIZE * CELL_SIZE + 10;
+
+		if (self.game_over) {
+			if (self.winner == 0) {
+				flx::draw_text(game_window, 10, status_y, "Draw! Press SPACE to restart", color_white, font_small);
+			} else {
+				var w = self.winner == 1 ? "X" : "O";
+				flx::draw_text(game_window, 10, status_y, "Player " + w + " wins! Press SPACE to restart", color_white, font_small);
+			}
+		} else {
+			var p = self.current_player == 1 ? "X" : "O";
+			flx::draw_text(game_window, 10, status_y, "Current player: " + p, color_white, font_small);
+		}
+	}
+
+}
+
+// --------------------------------------------------
+// Global game instance
+// --------------------------------------------------
+var game: TicTacToe = null;
+
+// --------------------------------------------------
+// Update loop
+// --------------------------------------------------
+fun update() {
+	if (flx::is_mouse_button_pressed(flx::MOUSE_LEFT_BUTTON)) {
+		var mouse = flx::get_mouse_position();
+		// game.handle_click(mouse.x, mouse.y);
+	}
+
+	// if (game.game_over and flx::is_key_released(flx::KEY_SPACE)) {
+	// 	game.reset();
+	// }
+}
+
+// --------------------------------------------------
+// Render loop
+// --------------------------------------------------
+fun render() {
+	flx::clear_screen(game_window, color_black);
+	// game.render();
+	flx::update(game_window);
+}
+
+// --------------------------------------------------
+// Main entry point
+// --------------------------------------------------
+fun main() {
+	var window_width  = BOARD_SIZE * CELL_SIZE;
+	var window_height = BOARD_SIZE * CELL_SIZE + 60;
+
+	game_window = flx::create_window("Tic-Tac-Toe", window_width, window_height);
+
+	game = TicTacToe();
+
+	while (not flx::is_quit(game_window)) {
+		update();
+		render();
+	}
+
+	flx::destroy_window(game_window);
+}
+
+main();

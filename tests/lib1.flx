@@ -1,0 +1,15 @@
+namespace lib1;
+
+using lib2;
+
+// include namespace lib2;
+
+fun fun1(f) {
+  // fun2(println);
+  lib2::fun2(lambda(){
+  // fun2(lambda(){
+    println(this);
+  });
+  println(this);
+  f();
+}
