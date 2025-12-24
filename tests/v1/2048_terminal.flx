@@ -1,7 +1,6 @@
 using flx.core.console;
-using flx.core.datetime;
-using flx.core.os;
 using flx.std.random;
+using flx.core.datetime;
 
 include namespace flx;
 
@@ -41,9 +40,9 @@ fun set_color(val: int) {
 }
 
 fun print_board(board: int[4][4]) {
-    if (os.name == "windows") {
+    if (flx.os == "windows") {
         system("cls");
-    } else if (os.name == "linux") {
+    } else if (flx.os == "linux") {
         system("clear");
     }
 
@@ -287,16 +286,16 @@ fun main() {
         direction = readch();
         
         if (direction == "w") {
-            moves_up(grid);
+            moves_up(ref grid);
         }
         else if (direction == "s") {
-            moves_down(grid);
+            moves_down(ref grid);
         }
         else if (direction == "a") {
-            moves_left(grid);
+            moves_left(ref grid);
         }
         else if (direction == "d") {
-            moves_right(grid);
+            moves_right(ref grid);
         }
 
         var valid: bool = false;
@@ -306,7 +305,7 @@ fun main() {
             var z: int = counts_zero(grid);
 
             if (z > 0) {
-                spawn_random(z, grid);
+                spawn_random(z, ref grid);
             }
 
             print_board(grid);
