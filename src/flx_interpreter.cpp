@@ -124,7 +124,9 @@ int FlexaInterpreter::interpreter() {
 		Compiler compiler(main_module, modules);
 		compiler.start();
 
-		BytecodeInstruction::write_bytecode_table(compiler.bytecode_program, project_root + "\\" + main_module->name + ".flxt");
+		if (args.debug) {
+			BytecodeInstruction::write_bytecode_table(compiler.bytecode_program, project_root + "\\" + main_module->name + ".flxt");
+		}
 
 		// execute
 		VirtualMachine vm(interpreter_global_scope, compiler.vm_debug, compiler.bytecode_program);

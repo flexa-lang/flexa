@@ -22,7 +22,10 @@ Compiler::Compiler(
 void Compiler::start() {
 	current_module_stack.top()->accept(this);
 
-	add_instruction(OpCode::OP_PUSH_INT, flx_int(0));
+	if (!single_expression_state) {
+		add_instruction(OpCode::OP_PUSH_INT, flx_int(0));
+	}
+
 	add_instruction(OpCode::OP_HALT);
 }
 
@@ -30,9 +33,15 @@ void Compiler::visit(std::shared_ptr<ASTModuleNode> astnode) {
 	current_this_name.push(std::make_pair("module", astnode->name));
 	vm_debug.add_module(astnode->name);
 
-	for (const auto& statement : astnode->statements) {
-		statement->accept(this);
-		remove_unused_constant(statement);
+	if (astnode->statements.size() == 1 && std::dynamic_pointer_cast<ASTExprNode>(astnode->statements[0])) {
+		single_expression_state = true;
+		astnode->statements[0]->accept(this);
+	}
+	else {
+		for (const auto& statement : astnode->statements) {
+			statement->accept(this);
+			remove_unused_constant(statement);
+		}
 	}
 
 	current_this_name.pop();

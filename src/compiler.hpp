@@ -29,6 +29,7 @@ namespace core {
 			std::vector<std::string> parsed_libs;
 			std::stack<std::pair<std::string, std::string>> current_this_name;
 			std::stack<size_t> scope_unwind_stack;
+			bool single_expression_state = false;
 
 		private:
 			template <typename T>

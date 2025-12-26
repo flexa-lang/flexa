@@ -5,6 +5,8 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "semantic_analysis.hpp"
+#include "compiler.hpp"
+#include "vm.hpp"
 #include "utils.hpp"
 #include "types.hpp"
 #include "constants.hpp"
@@ -38,8 +40,8 @@ int FlexaRepl::execute(const FlexaCliArgs& args) {
 	std::cout << Constants::NAME << " " << Constants::VER << " [" << Constants::YEAR << "]" << std::endl;
 	std::cout << "Type \"#help\" for more information." << std::endl;
 
-	std::shared_ptr<Scope> semantic_global_scope = std::make_shared<Scope>(true);
-	std::shared_ptr<Scope> interpreter_global_scope = std::make_shared<Scope>(true);
+	std::shared_ptr<Scope> semantic_global_scope = std::make_shared<Scope>(Constants::DEFAULT_NAMESPACE, "REPL");
+	std::shared_ptr<Scope> interpreter_global_scope = std::make_shared<Scope>(Constants::DEFAULT_NAMESPACE, "REPL");
 
 	while (true) {
 		std::string input_line;
@@ -120,9 +122,6 @@ int FlexaRepl::execute(const FlexaCliArgs& args) {
 				continue;
 			}
 
-			semantic_global_scope->set_owner(module);
-			interpreter_global_scope->set_owner(module);
-
 			// check if it's all ok using a temp global scope
 			std::shared_ptr<Scope> temp = std::make_shared<Scope>(*semantic_global_scope);
 			SemanticAnalyser temp_semantic_analyser(temp, module, modules, args.program_args);
@@ -131,22 +130,23 @@ int FlexaRepl::execute(const FlexaCliArgs& args) {
 			SemanticAnalyser semantic_analyser(semantic_global_scope, module, modules, args.program_args);
 			semantic_analyser.start();
 
-			Interpreter interpreter(interpreter_global_scope, module, modules);
-			interpreter.visit(module);
+			// compile
+			Compiler compiler(module, modules);
+			compiler.start();
+
+			// execute
+			VirtualMachine vm(interpreter_global_scope, compiler.vm_debug, compiler.bytecode_program);
+			vm.run();
 
 			if (file_load) {
 				std::cout << std::endl << "File loaded successfully." << std::endl;
 			}
 			else {
+				auto stack_top = vm.get_evaluation_stack_top();
 				// not is undefined and it's an expression
-				if (!TypeDefinition::is_undefined(interpreter.current_expression_value->type)
-					&& source.find(';') == std::string::npos) {
-					std::cout << RuntimeOperations::parse_value_to_string(interpreter.current_expression_value) << std::endl;
+				if (!stack_top->is_undefined() && source.find(';') == std::string::npos) {
+					std::cout << RuntimeOperations::parse_value_to_string(stack_top) << std::endl;
 				}
-			}
-
-			if (interpreter.exit_from_program){
-				break;
 			}
 		}
 		catch (const std::runtime_error& e) {
