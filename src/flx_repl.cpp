@@ -38,15 +38,14 @@ int FlexaRepl::execute(const FlexaCliArgs& args) {
 	std::cout << Constants::NAME << " " << Constants::VER << " [" << Constants::YEAR << "]" << std::endl;
 	std::cout << "Type \"#help\" for more information." << std::endl;
 
-	//std::shared_ptr<Scope> semantic_global_scope = std::make_shared<Scope>(true);
-	//std::shared_ptr<Scope> interpreter_global_scope = std::make_shared<Scope>(true);
+	std::shared_ptr<Scope> semantic_global_scope = std::make_shared<Scope>(true);
+	std::shared_ptr<Scope> interpreter_global_scope = std::make_shared<Scope>(true);
 
 	while (true) {
 		std::string input_line;
 		std::string prog_name = "REPL";
 		std::string source;
 		bool file_load = false;
-		bool expr = false;
 
 		input_line = read(">>> ");
 		input_line = std::regex_replace(input_line, std::regex("^ +| +$"), "$1");
@@ -121,34 +120,34 @@ int FlexaRepl::execute(const FlexaCliArgs& args) {
 				continue;
 			}
 
-			//semantic_global_scope->set_owner(module);
-			//interpreter_global_scope->set_owner(module);
+			semantic_global_scope->set_owner(module);
+			interpreter_global_scope->set_owner(module);
 
 			// check if it's all ok using a temp global scope
-			//std::shared_ptr<Scope> temp = std::make_shared<Scope>(*semantic_global_scope);
-			//SemanticAnalyser temp_semantic_analyser(temp, module, modules, args.program_args);
-			//temp_semantic_analyser.start();
+			std::shared_ptr<Scope> temp = std::make_shared<Scope>(*semantic_global_scope);
+			SemanticAnalyser temp_semantic_analyser(temp, module, modules, args.program_args);
+			temp_semantic_analyser.start();
 
-			//SemanticAnalyser semantic_analyser(semantic_global_scope, module, modules, args.program_args);
-			//semantic_analyser.start();
+			SemanticAnalyser semantic_analyser(semantic_global_scope, module, modules, args.program_args);
+			semantic_analyser.start();
 
-			//Interpreter interpreter(interpreter_global_scope, module, modules);
-			//interpreter.visit(module);
+			Interpreter interpreter(interpreter_global_scope, module, modules);
+			interpreter.visit(module);
 
-			//if (file_load) {
-			//	std::cout << std::endl << "File loaded successfully." << std::endl;
-			//}
-			//else {
-			//	// not is undefined and it's an expression
-			//	if (!TypeDefinition::is_undefined(interpreter.current_expression_value->type)
-			//		&& source.find(';') == std::string::npos) {
-			//		std::cout << RuntimeOperations::parse_value_to_string(interpreter.current_expression_value) << std::endl;
-			//	}
-			//}
+			if (file_load) {
+				std::cout << std::endl << "File loaded successfully." << std::endl;
+			}
+			else {
+				// not is undefined and it's an expression
+				if (!TypeDefinition::is_undefined(interpreter.current_expression_value->type)
+					&& source.find(';') == std::string::npos) {
+					std::cout << RuntimeOperations::parse_value_to_string(interpreter.current_expression_value) << std::endl;
+				}
+			}
 
-			//if (interpreter.exit_from_program){
-			//	break;
-			//}
+			if (interpreter.exit_from_program){
+				break;
+			}
 		}
 		catch (const std::runtime_error& e) {
 			std::string err = e.what();

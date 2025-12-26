@@ -250,12 +250,12 @@ void Compiler::visit(std::shared_ptr<ASTExitNode> astnode) {
 	add_instruction(OpCode::OP_HALT);
 }
 
-void Compiler::visit(std::shared_ptr<ASTContinueNode> astnode) {
+void Compiler::visit(std::shared_ptr<ASTContinueNode>) {
 	add_instruction(OpCode::OP_UNWIND);
 	start_pointers.top().push_back(add_instruction(OpCode::OP_JUMP, size_t(0)));
 }
 
-void Compiler::visit(std::shared_ptr<ASTBreakNode> astnode) {
+void Compiler::visit(std::shared_ptr<ASTBreakNode>) {
 	add_instruction(OpCode::OP_UNWIND);
 	end_pointers.top().push_back(add_instruction(OpCode::OP_JUMP, size_t(0)));
 }
@@ -572,7 +572,7 @@ void Compiler::visit(std::shared_ptr<ASTThrowNode> astnode) {
 	add_instruction(OpCode::OP_THROW);
 }
 
-void Compiler::visit(std::shared_ptr<ASTEllipsisNode> astnode) {}
+void Compiler::visit(std::shared_ptr<ASTEllipsisNode>) {}
 
 void Compiler::visit(std::shared_ptr<ASTWhileNode> astnode) {
 	open_end_pointers();
@@ -656,7 +656,7 @@ void Compiler::visit(std::shared_ptr<ASTClassDefinitionNode> astnode) {
 	current_this_name.pop();
 }
 
-void Compiler::visit(std::shared_ptr<ASTValueNode> astnode) {}
+void Compiler::visit(std::shared_ptr<ASTValueNode>) {}
 
 void Compiler::visit(std::shared_ptr<ASTLiteralNode<flx_bool>> astnode) {
 	add_instruction(OpCode::OP_PUSH_BOOL, flx_bool(astnode->value));
@@ -803,7 +803,7 @@ void Compiler::visit(std::shared_ptr<ASTTypeNode> astnode) {
 	add_instruction(OpCode::OP_PUSH_TYPE);
 }
 
-void Compiler::visit(std::shared_ptr<ASTNullNode> astnode) {
+void Compiler::visit(std::shared_ptr<ASTNullNode>) {
 	add_instruction(OpCode::OP_PUSH_VOID);
 }
 

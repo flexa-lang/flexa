@@ -63,7 +63,7 @@ void ExceptionHelper::throw_struct_value_assign_type_err(const std::string& type
 	ExceptionHelper::throw_stack_err();
 	throw std::runtime_error("invalid type " + TypeDefinition::buid_type_str(rtype) +
 		" trying to assign '" + identifier + "' member of '" + TypeDefinition::buid_struct_type_name(type_name_space, type_name) + "' struct, "
-		"expected " + TypeDefinition::buid_type_str(rtype));
+		"expected " + TypeDefinition::buid_type_str(ltype));
 }
 
 void ExceptionHelper::throw_struct_member_err(const std::string& type_name_space, const std::string& type_name, const std::string& variable) {

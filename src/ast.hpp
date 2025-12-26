@@ -195,10 +195,10 @@ namespace core {
 	class ASTSwitchNode : public ASTStatementNode {
 	public:
 		std::shared_ptr<ASTExprNode> condition;
-		std::map<std::shared_ptr<ASTExprNode>, size_t> case_blocks;
-		std::map<size_t, size_t> parsed_case_blocks;
-		size_t default_block;
 		std::vector<std::shared_ptr<ASTNode>> statements;
+		std::map<std::shared_ptr<ASTExprNode>, size_t> case_blocks;
+		size_t default_block;
+		std::map<size_t, size_t> parsed_case_blocks;
 
 		ASTSwitchNode(
 			std::shared_ptr<ASTExprNode> condition,
@@ -478,9 +478,9 @@ namespace core {
 
 	class ASTIdentifierNode : public ASTExprNode {
 	public:
-		std::string identifier;
-		std::string access_name_space;
 		std::vector<Identifier> identifier_vector;
+		std::string access_name_space;
+		std::string identifier;
 
 		explicit ASTIdentifierNode(
 			const std::vector<Identifier>& identifier_vector,
@@ -510,11 +510,11 @@ namespace core {
 	class ASTFunctionCallNode : public ASTExprNode {
 	public:
 		std::string access_name_space;
-		std::string identifier;
 		std::vector<Identifier> identifier_vector;
 		std::vector<std::shared_ptr<ASTExprNode>> parameters;
 		std::vector<Identifier> expression_identifier_vector;
 		std::shared_ptr<ASTFunctionCallNode> expression_call;
+		std::string identifier;
 
 		ASTFunctionCallNode(
 			const std::string& access_name_space,

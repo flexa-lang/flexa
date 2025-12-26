@@ -11,8 +11,8 @@ DependencyResolver::DependencyResolver(
 	const std::map<std::string, std::shared_ptr<ASTModuleNode>>& modules
 )
 	: Visitor(modules, main_module),
-	libs(std::vector<std::string>()),
-	lib_names(std::vector<std::string>()) {};
+	lib_names(std::vector<std::string>()),
+	libs(std::vector<std::string>()) {};
 
 void DependencyResolver::start() {
 	visit(current_module_stack.top());
@@ -95,7 +95,7 @@ void DependencyResolver::visit(std::shared_ptr<ASTStructDefinitionNode>) {}
 void DependencyResolver::visit(std::shared_ptr<ASTLambdaFunctionNode>) {}
 void DependencyResolver::visit(std::shared_ptr<ASTArrayConstructorNode>) {}
 void DependencyResolver::visit(std::shared_ptr<ASTStructConstructorNode>) {}
-void DependencyResolver::visit(std::shared_ptr<ASTClassDefinitionNode> astnode) {}
+void DependencyResolver::visit(std::shared_ptr<ASTClassDefinitionNode>) {}
 
 void DependencyResolver::visit(std::shared_ptr<ASTTypeCastNode>) {}
 void DependencyResolver::visit(std::shared_ptr<ASTTypeNode>) {}

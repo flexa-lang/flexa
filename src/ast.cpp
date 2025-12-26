@@ -299,9 +299,9 @@ ASTIdentifierNode::ASTIdentifierNode(
 	size_t row, size_t col
 )
 	: ASTExprNode(row, col),
-	identifier(identifier_vector[0].identifier),
 	identifier_vector(identifier_vector),
-	access_name_space(access_name_space) {
+	access_name_space(access_name_space),
+	identifier(identifier_vector[0].identifier) {
 }
 
 ASTTernaryNode::ASTTernaryNode(
@@ -325,12 +325,12 @@ ASTFunctionCallNode::ASTFunctionCallNode(
 	size_t row, size_t col
 )
 	: ASTExprNode(row, col),
-	identifier(identifier_vector[0].identifier),
 	access_name_space(access_name_space),
-	parameters(parameters),
 	identifier_vector(identifier_vector),
+	parameters(parameters),
 	expression_identifier_vector(expression_identifier_vector),
-	expression_call(expression_call) {
+	expression_call(expression_call),
+	identifier(identifier_vector[0].identifier) {
 }
 
 ASTTypeCastNode::ASTTypeCastNode(Type type, std::shared_ptr<ASTExprNode> expr, size_t row, size_t col)

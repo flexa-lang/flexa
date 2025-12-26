@@ -13,8 +13,8 @@ namespace interpreter {
 
 	class FlexaInterpreter {
 	private:
-		std::string libs_root;
 		std::string project_root;
+		std::string libs_root;
 		FlexaCliArgs args;
 
 	public:
