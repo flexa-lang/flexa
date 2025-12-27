@@ -9,7 +9,9 @@
 #include "semantic_analysis.hpp"
 #include "constants.hpp"
 
+#if defined(_WIN32)
 #pragma comment(lib, "winmm.lib")
+#endif // defined(_WIN32)
 
 using namespace core::modules;
 using namespace core::runtime;
@@ -87,16 +89,17 @@ void ModuleSound::register_functions(VirtualMachine* vm) {
 		};
 
 	vm->builtin_functions["set_volume"] = [this, vm]() {
-		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
-		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("volume"))->get_value();
-
-		unsigned long volume = val->get_f() * 65535;
 
 #ifdef linux
 
 		throw std::runtime_error("Not implemented yet");
 
 #elif  defined(_WIN32)
+
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("volume"))->get_value();
+
+		auto volume = static_cast<unsigned long>(val->get_f() * 65535);
 
 		waveOutSetVolume(0, MAKELONG(volume, volume));
 

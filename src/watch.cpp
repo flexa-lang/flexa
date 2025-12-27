@@ -19,7 +19,7 @@ void Watch::restart() {
 
 // Stopwatch
 
-Stopwatch::Stopwatch() : start_time(0), Watch(0) { }
+Stopwatch::Stopwatch() : Watch(0), start_time(0) { }
 
 Stopwatch::~Stopwatch() = default;
 
@@ -68,7 +68,7 @@ std::string Stopwatch::get_elapsed_formatted() {
 
 // ChronoStopwatch
 
-ChronoStopwatch::ChronoStopwatch() : start_time(std::chrono::steady_clock::now()), Watch(0) { }
+ChronoStopwatch::ChronoStopwatch() : Watch(0), start_time(std::chrono::steady_clock::now()) { }
 
 ChronoStopwatch::~ChronoStopwatch() = default;
 

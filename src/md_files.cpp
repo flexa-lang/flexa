@@ -73,7 +73,7 @@ void ModuleFiles::register_functions(VirtualMachine* vm) {
 
 			vm->push_constant(flxfile);
 		}
-		catch (std::runtime_error ex) {
+		catch (const std::runtime_error& ex) {
 			throw std::runtime_error(ex.what());
 		}
 

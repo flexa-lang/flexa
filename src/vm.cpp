@@ -15,8 +15,8 @@ VirtualMachine::VirtualMachine(
 	VmDebug vm_debug,
 	std::vector<BytecodeInstruction> instructions
 )
-	: vm_debug(std::move(vm_debug)),
-	instructions(instructions) {
+	: instructions(instructions),
+	vm_debug(std::move(vm_debug)) {
 	cleanup_type_set();
 
 	evaluation_stack = std::make_shared<std::vector<RuntimeValue*>>();
@@ -42,7 +42,7 @@ void VirtualMachine::run() {
 				return;
 			}
 		}
-		catch (std::exception ex) {
+		catch (const std::exception& ex) {
 			if (!try_stack.empty()) {
 				next_pc = try_stack.top();
 				try_stack.pop();
@@ -719,7 +719,7 @@ void VirtualMachine::handle_call() {
 
 					push_vm_scope(std::make_shared<Scope>(obj_as_scope->module_name_space, obj_as_scope->module_name));
 
-					declare_function_block_parameters(obj_as_scope->module_name_space, obj_as_scope->module_name, module_name, cls_const->parameters, signature);
+					declare_function_block_parameters(obj_as_scope->module_name_space, cls_const->parameters, signature);
 
 					vm_debug.debug_info_table[curr_pc] = std::vector<Operand>{
 						vm_debug.debug_info_table[curr_pc][0],
@@ -787,7 +787,7 @@ void VirtualMachine::handle_call() {
 
 	push_vm_scope(std::make_shared<Scope>(func_scope->module_name_space, func_scope->module_name));
 
-	declare_function_block_parameters(func_scope->module_name_space, func_scope->module_name, module_name, declfun->parameters, signature);
+	declare_function_block_parameters(func_scope->module_name_space, declfun->parameters, signature);
 
 	if (call_identifier.starts_with("lambda@")) {
 		call_identifier = "<lambda>";
@@ -857,7 +857,7 @@ void VirtualMachine::handle_return() {
 }
 
 void VirtualMachine::declare_function_block_parameters(
-	const std::string& func_name_space, const std::string& func_module_name, const std::string& module_name,
+	const std::string& func_name_space,
 	std::vector<std::shared_ptr<TypeDefinition>> current_function_defined_parameters,
 	std::vector<std::shared_ptr<TypeDefinition>> current_function_calling_arguments) {
 	auto rest_name = std::string();
@@ -886,7 +886,7 @@ void VirtualMachine::declare_function_block_parameters(
 					if (current_function_defined_parameters.size() - 1 == i
 						&& current_function_calling_arguments.size() - 1 == i
 						&& current_value->is_array()) {
-						for (size_t i = 0; i < current_value->get_arr().size(); ++i) {
+						for (flx_int i = 0; i < current_value->get_arr().size(); ++i) {
 							vec.push_back(current_value->get_arr()[i]);
 						}
 					}
@@ -895,14 +895,14 @@ void VirtualMachine::declare_function_block_parameters(
 					}
 				}
 				else {
-					declare_function_parameter(func_name_space, func_module_name, module_name, decl->identifier, *decl, current_value);
+					declare_function_parameter(func_name_space, decl->identifier, *decl, current_value);
 				}
 			}
 			else if (const auto decls = std::dynamic_pointer_cast<UnpackedVariableDefinition>(current_function_defined_parameters[i])) {
 				for (auto& decl : decls->variables) {
 					auto original_sub_value = current_value->get_str()[decl.identifier]->get_value();
 					auto sub_value = allocate_value(new RuntimeValue(original_sub_value));
-					declare_function_parameter(func_name_space, func_module_name, module_name, decl.identifier, decl, sub_value);
+					declare_function_parameter(func_name_space, decl.identifier, decl, sub_value);
 				}
 			}
 		}
@@ -921,7 +921,7 @@ void VirtualMachine::declare_function_block_parameters(
 			next_pc = current_pc;
 			auto current_value = get_evaluation_stack_top();
 
-			declare_function_parameter(func_name_space, func_module_name, module_name, decl->identifier, *decl, current_value);
+			declare_function_parameter(func_name_space, decl->identifier, *decl, current_value);
 		}
 	}
 
@@ -940,8 +940,8 @@ void VirtualMachine::declare_function_block_parameters(
 }
 
 void VirtualMachine::declare_function_parameter(
-	const std::string& func_name_space, const std::string& func_module_name, const std::string& module_name,
-	const std::string& identifier, TypeDefinition variable, RuntimeValue* value) {
+	const std::string& func_name_space, const std::string& identifier,
+	TypeDefinition variable, RuntimeValue* value) {
 	auto curr_scope = get_back_scope(func_name_space);
 
 	auto var = std::make_shared<RuntimeVariable>(identifier, variable);
@@ -990,7 +990,7 @@ void VirtualMachine::handle_has_next_element() {
 	auto& index = it_value.index;
 
 	if (value->is_array()) {
-		if (index < value->get_arr().size()) {
+		if (static_cast<flx_int>(index) < value->get_arr().size()) {
 			has_next = true;
 		}
 
@@ -1026,7 +1026,7 @@ void VirtualMachine::handle_next_element() {
 	auto& index = it_value.index;
 
 	if (value->is_array()) {
-		if (index >= value->get_arr().size()) {
+		if (static_cast<flx_int>(index) >= value->get_arr().size()) {
 			gc.remove_root(value);
 			iterator_stack.pop();
 			return;
@@ -1100,6 +1100,9 @@ void VirtualMachine::handle_type_parse() {
 		case Type::T_STRING:
 			new_value->set(flx_bool(!value->get_s().empty()));
 			break;
+		default:
+			ExceptionHelper::throw_invalid_type_parse(type, value->type);
+			break;
 		}
 		break;
 
@@ -1124,6 +1127,9 @@ void VirtualMachine::handle_type_parse() {
 			catch (...) {
 				throw std::runtime_error("'" + value->get_s() + "' is not a valid value to parse int");
 			}
+			break;
+		default:
+			ExceptionHelper::throw_invalid_type_parse(type, value->type);
 			break;
 		}
 		break;
@@ -1150,6 +1156,9 @@ void VirtualMachine::handle_type_parse() {
 				throw std::runtime_error("'" + value->get_s() + "' is not a valid value to parse float");
 			}
 			break;
+		default:
+			ExceptionHelper::throw_invalid_type_parse(type, value->type);
+			break;
 		}
 		break;
 
@@ -1175,12 +1184,19 @@ void VirtualMachine::handle_type_parse() {
 				new_value->set(flx_char(value->get_s()[0]));
 			}
 			break;
+		default:
+			ExceptionHelper::throw_invalid_type_parse(type, value->type);
+			break;
 		}
 		break;
 
 	case Type::T_STRING:
 		new_value->set(flx_string(RuntimeOperations::parse_value_to_string(value, true)));
-
+		break;
+		
+	default:
+		ExceptionHelper::throw_invalid_type_parse(type, value->type);
+		break;
 	}
 
 	new_value->type = type;
@@ -1250,7 +1266,7 @@ void VirtualMachine::check_build_array(RuntimeValue* new_value, std::vector<size
 flx_array VirtualMachine::build_array(const std::vector<size_t>& dim, RuntimeValue* init_value, intmax_t i) {
 	flx_array raw_arr;
 
-	if (dim.size() - 1 == i) {
+	if (!dim.empty() && static_cast<intmax_t>(dim.size() - 1) == i) {
 		current_expression_array_type = TypeDefinition();
 	}
 

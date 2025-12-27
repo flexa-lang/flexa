@@ -404,3 +404,5 @@ FodyWeavers.xsd
 tests/docs2.txt
 *.flxt
 tests/created
+doc.txt
+doc2.txt

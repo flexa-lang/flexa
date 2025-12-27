@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/debug/flexa",
-    //   "args": ["${workspaceFolder}/tests/main.flx"],
+      "args": ["-l", "${workspaceFolder}/std/src", "${workspaceFolder}/tests/main.flx"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

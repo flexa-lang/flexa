@@ -155,7 +155,7 @@ void GarbageCollector::mark() {
 	for (auto it = array_roots.begin(); it != array_roots.end();) {
 		if (auto root = it->lock()) {
 			auto ptr_root = root.get();
-			for (size_t i = 0; i < ptr_root->size(); ++i) {
+			for (flx_int i = 0; i < ptr_root->size(); ++i) {
 				mark_object((*ptr_root)[i]);
 			}
 			++it;
@@ -208,7 +208,7 @@ void GarbageCollector::sweep() {
 	for (const auto& iterable_ptr : array_roots) {
 		if (auto root = iterable_ptr.lock()) {
 			auto ptr_root = root.get();
-			for (size_t i = 0; i < ptr_root->size(); ++i) {
+			for (flx_int i = 0; i < ptr_root->size(); ++i) {
 				(*ptr_root)[i]->marked = false;
 			}
 		}

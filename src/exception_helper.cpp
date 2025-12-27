@@ -77,6 +77,10 @@ void ExceptionHelper::throw_undeclared_function(const std::string& identifier, c
 	throw std::runtime_error("function '" + func_name + "' was never declared");
 }
 
+void ExceptionHelper::throw_invalid_type_parse(Type ltype, Type rtype) {
+	throw std::runtime_error("invalid conversion from " + TypeDefinition::type_str(ltype) + " to " + TypeDefinition::type_str(rtype));
+}
+
 std::string ExceptionHelper::buid_member_name(const std::vector<Identifier>& identifier_vector) {
 	std::string ss;
 	

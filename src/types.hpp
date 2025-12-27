@@ -471,7 +471,7 @@ namespace core {
 
 		static RuntimeValue* do_operation(const std::string& op, RuntimeValue* lval, RuntimeValue* rval);
 		static flx_bool do_relational_operation(const std::string& op, RuntimeValue* lval, RuntimeValue* rval);
-		static flx_int do_spaceship_operation(const std::string& op, RuntimeValue* lval, RuntimeValue* rval);
+		static flx_int do_spaceship_operation(RuntimeValue* lval, RuntimeValue* rval);
 		static flx_int do_operation(flx_int lval, flx_int rval, const std::string& op);
 		static flx_float do_operation(flx_float lval, flx_float rval, const std::string& op);
 		static flx_string do_operation(flx_string lval, flx_string rval, const std::string& op);

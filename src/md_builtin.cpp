@@ -106,7 +106,7 @@ void ModuleBuiltin::register_functions(VirtualMachine* vm) {
 			auto var = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("args"));
 			auto args = var->get_value()->get_arr();
 
-			for (size_t i = 0; i < args.size(); ++i) {
+			for (flx_int i = 0; i < args.size(); ++i) {
 				std::cout << RuntimeOperations::parse_value_to_string(args[i], true);
 			}
 		}
@@ -125,7 +125,7 @@ void ModuleBuiltin::register_functions(VirtualMachine* vm) {
 			auto var = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("args"));
 			auto args = var->get_value()->get_arr();
 
-			for (size_t i = 0; i < args.size(); ++i) {
+			for (flx_int i = 0; i < args.size(); ++i) {
 				std::cout << RuntimeOperations::parse_value_to_string(args[i]);
 			}
 		}

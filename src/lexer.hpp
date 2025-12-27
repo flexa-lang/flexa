@@ -22,17 +22,17 @@ namespace core {
 			void set_current_token(size_t token);
 
 		private:
-			char before_char;
-			char current_char;
-			char next_char;
-			size_t current_token = 0;
-			intmax_t current_index = 0;
-			size_t current_row = 1;
-			size_t start_col = 0;
-			size_t current_col = 0;
 			std::string source;
 			std::string name;
 			std::vector<Token> tokens;
+			char before_char = '\0';
+			char current_char = '\0';
+			char next_char = '\0';
+			size_t current_index = 0;
+			size_t current_token = 0;
+			size_t current_row = 1;
+			size_t current_col = 0;
+			size_t start_col = 0;
 
 			void tokenize();
 			bool has_next();

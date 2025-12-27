@@ -122,7 +122,7 @@ void FlexaCliArgs::parse_args() {
 }
 
 void FlexaCliArgs::throw_if_not_parameter(int argc, size_t i, std::string parameter) {
-	if (i >= argc) {
+	if (i >= static_cast<size_t>(argc)) {
 		throw std::runtime_error("expected value after " + parameter);
 	}
 }

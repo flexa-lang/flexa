@@ -29,9 +29,11 @@ Lexer::Lexer(
 Lexer::~Lexer() = default;
 
 void Lexer::tokenize() {
-	current_index = -1;
-
-	advance();
+	++current_col;
+	current_char = source[current_index];
+	if (has_next()) {
+		next_char = source[current_index + 1];
+	}
 
 	while (has_next()) {
 		if (is_space()) {
@@ -57,7 +59,7 @@ void Lexer::tokenize() {
 			start_col = current_col;
 			tokens.push_back(process_identifier());
 		}
-		else if (std::isdigit(current_char) || current_char == '.' && std::isdigit(next_char)) {
+		else if (std::isdigit(current_char) || (current_char == '.' && std::isdigit(next_char))) {
 			start_col = current_col;
 			tokens.push_back(process_number());
 		}
@@ -87,7 +89,7 @@ Token Lexer::process_comment() {
 		comment += current_char;
 		advance();
 	} while (has_next()
-		&& (is_block && (current_char != '/' || before_char != '*') || !is_block && current_char != '\n'));
+		&& ((is_block && (current_char != '/' || before_char != '*')) || (!is_block && current_char != '\n')));
 
 	comment += current_char;
 	advance();
@@ -288,8 +290,8 @@ Token Lexer::process_special_number() {
 		|| (oct && current_char >= '0' && current_char <= '7')
 		|| (dec && std::isdigit(current_char))
 		|| (hex && (std::isdigit(current_char)
-			|| current_char >= 'a' && current_char <= 'f'
-			|| current_char >= 'A' && current_char <= 'F')))) {
+			|| (current_char >= 'a' && current_char <= 'f')
+			|| (current_char >= 'A' && current_char <= 'F'))))) {
 		number += current_char;
 		advance();
 	}
@@ -396,7 +398,8 @@ Token Lexer::process_symbol() {
 			str_symbol += current_char;
 			advance();
 		}
-	case '+': // let fallthrough
+    	[[fallthrough]];
+	case '+':
 		if (current_char == '+' && !is_unary) {
 			is_unary = true;
 			str_symbol += current_char;
@@ -421,12 +424,14 @@ Token Lexer::process_symbol() {
 			str_symbol += current_char;
 			advance();
 		}
-	case '/': // let fallthrough
+		[[fallthrough]];
+	case '/':
 		if (current_char == '%' && !found) {
 			str_symbol += current_char;
 			advance();
 		}
-	case '%': // let fallthrough
+		[[fallthrough]];
+	case '%':
 		if (current_char == '=') {
 			str_symbol += current_char;
 			advance();
@@ -473,7 +478,8 @@ Token Lexer::process_symbol() {
 			str_symbol += current_char;
 			advance();
 		}
-	case '>': // let fallthrough
+		[[fallthrough]];
+	case '>':
 		if (current_char == '>' && !found) {
 			found = true;
 			str_symbol += current_char;

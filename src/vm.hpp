@@ -108,15 +108,11 @@ namespace core {
 
 			void declare_function_block_parameters(
 				const std::string& func_name_space,
-				const std::string& func_module_name,
-				const std::string& module_name,
 				std::vector<std::shared_ptr<TypeDefinition>> current_function_defined_parameters,
 				std::vector<std::shared_ptr<TypeDefinition>> current_function_calling_arguments
 			);
 			void declare_function_parameter(
 				const std::string& func_name_space,
-				const std::string& func_name,
-				const std::string& module_name,
 				const std::string& identifier,
 				TypeDefinition variable,
 				RuntimeValue* value

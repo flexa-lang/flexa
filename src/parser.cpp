@@ -10,7 +10,7 @@ using namespace core;
 using namespace core::parser;
 
 Parser::Parser(const std::string& name, Lexer* lexer)
-	: name(name), lexer(lexer) {
+	: lexer(lexer), name(name) {
 	current_token = lexer->next_token();
 	next_token = lexer->next_token();
 }
@@ -293,7 +293,6 @@ std::shared_ptr<ASTSwitchNode> Parser::parse_switch_statement() {
 	consume_token();
 
 	while (current_token.type == TK_CASE) {
-		bool is_block = false;
 		consume_token();
 		std::shared_ptr<ASTExprNode> case_exrp = parse_expression();
 		int start_position = statements.size();
@@ -318,7 +317,6 @@ std::shared_ptr<ASTSwitchNode> Parser::parse_switch_statement() {
 	}
 
 	if (current_token.type == TK_DEFAULT) {
-		bool is_block = false;
 		default_block = statements.size();
 		consume_token();
 		consume_token();
@@ -552,7 +550,6 @@ std::shared_ptr<ASTDoWhileNode> Parser::parse_do_while_statement() {
 
 TypeDefinition Parser::parse_type_definition(Type default_type) {
 	Type type = Type::T_UNDEFINED;
-	Type array_type = Type::T_UNDEFINED;
 	auto dim_vector = std::vector<std::shared_ptr<ASTExprNode>>();
 	std::string type_name = "";
 	std::string type_name_space = "";
@@ -701,12 +698,9 @@ std::shared_ptr<ASTStructDefinitionNode> Parser::parse_struct_definition() {
 
 std::shared_ptr<VariableDefinition> Parser::parse_struct_var_def() {
 	std::string identifier;
-	Type type = Type::T_UNDEFINED;
 	TypeDefinition type_def;
 	std::shared_ptr<ASTExprNode> expr_size;
 	bool is_const = false;
-	size_t row = current_token.row;
-	size_t col = current_token.col;
 
 	if (next_token.type == TK_VAR) {
 		consume_token();
@@ -1226,7 +1220,6 @@ std::shared_ptr<ASTExprNode> Parser::parse_function_expression_assignment_tail()
 }
 
 std::shared_ptr<ASTDeclarationNode> Parser::parse_declaration_statement() {
-	Type type = Type::T_UNDEFINED;
 	TypeDefinition type_def;
 	std::string identifier;
 	std::shared_ptr<ASTExprNode> expr;
@@ -1256,7 +1249,6 @@ std::shared_ptr<ASTDeclarationNode> Parser::parse_declaration_statement() {
 }
 
 std::shared_ptr<ASTDeclarationNode> Parser::parse_param_declaration_statement() {
-	Type type = Type::T_UNDEFINED;
 	TypeDefinition type_def;
 	std::string identifier;
 	size_t row = current_token.row;
@@ -1391,12 +1383,8 @@ std::shared_ptr<VariableDefinition> Parser::parse_unpacked_formal_param() {
 	std::string identifier;
 	std::string type_name;
 	std::string type_name_space;
-	Type type = Type::T_UNDEFINED;
-	Type array_type = Type::T_UNDEFINED;
 	std::shared_ptr<ASTExprNode> def_expr;
 	auto dim = std::vector<std::shared_ptr<ASTExprNode>>();
-	size_t row = current_token.row;
-	size_t col = current_token.col;
 
 	check_current_token(TK_IDENTIFIER);
 
@@ -1432,7 +1420,6 @@ std::shared_ptr<ASTTypeNode> Parser::parse_type_node() {
 	size_t row = current_token.row;
 	size_t col = current_token.col;
 	auto type = parse_type();
-	auto array_type = Type::T_UNDEFINED;
 	auto dim = parse_dimension_vector();
 
 	return std::make_shared<ASTTypeNode>(TypeDefinition(type, dim), row, col);

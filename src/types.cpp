@@ -4,7 +4,7 @@
 
 #include "utils.hpp"
 #include "exception_helper.hpp"
-#include "module.hpp";
+#include "module.hpp"
 #include "md_datetime.hpp"
 #include "md_graphics.hpp"
 #include "md_files.hpp"
@@ -46,13 +46,13 @@ flx_class::flx_class()
 
 TypeDefinition::TypeDefinition(Type type, const std::vector<std::shared_ptr<ASTExprNode>>& expr_dim,
 	const std::string& type_name_space, const std::string& type_name)
-	: type(type), expr_dim(expr_dim), type_name(type_name), type_name_space(type_name_space) {
+	: type(type), type_name(type_name), type_name_space(type_name_space), expr_dim(expr_dim) {
 	normalize();
 }
 
 TypeDefinition::TypeDefinition(Type type, const std::vector<size_t>& dim,
 	const std::string& type_name_space, const std::string& type_name)
-	: type(type), dim(dim), type_name(type_name), type_name_space(type_name_space) {
+	: type(type), type_name(type_name), type_name_space(type_name_space), dim(dim) {
 	normalize();
 }
 
@@ -71,8 +71,8 @@ TypeDefinition::TypeDefinition()
 }
 
 bool TypeDefinition::is_any_or_match_type_def(TypeDefinition rtype, bool strict, bool strict_array) {
-	if (is_any() && !is_array()
-		|| rtype.is_any() && !rtype.is_array()
+	if ((is_any() && !is_array())
+		|| (rtype.is_any() && !rtype.is_array())
 		|| is_void()
 		|| rtype.is_void()) {
 		return true;
@@ -98,11 +98,11 @@ bool TypeDefinition::match_type_def_bool(TypeDefinition rtype) {
 }
 
 bool TypeDefinition::match_type_def_int(TypeDefinition rtype, bool strict) {
-	return is_int() && (strict && rtype.is_int() || !strict && rtype.is_numeric());
+	return is_int() && ((strict && rtype.is_int()) || (!strict && rtype.is_numeric()));
 }
 
 bool TypeDefinition::match_type_def_float(TypeDefinition rtype, bool strict) {
-	return is_float() && (strict && rtype.is_float() || !strict && rtype.is_numeric());
+	return is_float() && ((strict && rtype.is_float()) || (!strict && rtype.is_numeric()));
 }
 
 bool TypeDefinition::match_type_def_char(TypeDefinition rtype) {
@@ -110,7 +110,7 @@ bool TypeDefinition::match_type_def_char(TypeDefinition rtype) {
 }
 
 bool TypeDefinition::match_type_def_string(TypeDefinition rtype, bool strict) {
-	return is_string() && (strict && rtype.is_string() || !strict && rtype.is_textual());
+	return is_string() && ((strict && rtype.is_string()) || (!strict && rtype.is_textual()));
 }
 
 bool TypeDefinition::match_type_def_array(TypeDefinition rtype, bool strict, bool strict_array) {
@@ -142,7 +142,7 @@ bool TypeDefinition::match_array_dim(TypeDefinition rtype) {
 	std::vector<size_t> var_dim = dim;
 	std::vector<size_t> expr_dim = rtype.dim;
 
-	if ((var_dim.size() == 1 && var_dim[0] >= 0 && var_dim[0] <= 1) || (expr_dim.size() == 1 && expr_dim[0] >= 0 && expr_dim[0] <= 1)
+	if ((var_dim.size() == 1 && var_dim[0] <= 1) || (expr_dim.size() == 1 && expr_dim[0] <= 1)
 		|| var_dim.size() == 0 || expr_dim.size() == 0) {
 		return true;
 	}
@@ -724,7 +724,7 @@ RuntimeValue* RuntimeValue::get_item(flx_int index, bool use_holder_reference) {
 
 RuntimeValue* RuntimeValue::get_char(flx_int index, bool use_holder_reference) {
 	if (!s) return nullptr;
-	if (index < 0 || index >= (*s).size()) {
+	if (index < 0 || index >= static_cast<flx_int>((*s).size())) {
 		throw std::runtime_error("invalid string access position " + std::to_string(index) + " in a string with size " + std::to_string((*s).size()));
 	}
 	auto sub_value = new RuntimeValue(flx_char((*s)[index]));
@@ -861,7 +861,7 @@ std::vector<runtime::GCObject*> RuntimeValue::get_references() {
 
 	if (is_array()) {
 		auto arr = get_arr();
-		for (size_t i = 0; i < arr.size(); ++i) {
+		for (flx_int i = 0; i < arr.size(); ++i) {
 			const auto& v = arr[i];
 			references.push_back(v);
 		}
@@ -1393,7 +1393,7 @@ RuntimeValue* RuntimeOperations::do_operation(const std::string& op, RuntimeValu
 		if (rval->is_array()) {
 			flx_array expr_col = rval->get_arr();
 
-			for (size_t i = 0; i < expr_col.size(); ++i) {
+			for (flx_int i = 0; i < expr_col.size(); ++i) {
 				res = RuntimeOperations::equals_value(lval, expr_col[i]);
 				if (res) {
 					break;
@@ -1467,7 +1467,7 @@ RuntimeValue* RuntimeOperations::do_operation(const std::string& op, RuntimeValu
 	}
 	else if (lval->is_int()) {
 		if (rval->is_numeric() && op == "<=>") {
-			return new RuntimeValue(do_spaceship_operation(op, lval, rval));
+			return new RuntimeValue(do_spaceship_operation(lval, rval));
 		}
 
 		if (rval->is_numeric() && Token::is_relational_op(op)) {
@@ -1496,7 +1496,7 @@ RuntimeValue* RuntimeOperations::do_operation(const std::string& op, RuntimeValu
 	}
 	else if (lval->is_float()) {
 		if (rval->is_numeric() && op == "<=>") {
-			return new RuntimeValue(do_spaceship_operation(op, lval, rval));
+			return new RuntimeValue(do_spaceship_operation(lval, rval));
 		}
 
 		if (rval->is_numeric() && Token::is_relational_op(op)) {
@@ -1597,14 +1597,18 @@ flx_bool RuntimeOperations::do_relational_operation(const std::string& op, Runti
 	else if (op == ">=") {
 		return l >= r;
 	}
+
 	ExceptionHelper::throw_operation_err(op, *lval, *rval);
+
+	return false;
 }
 
-flx_int RuntimeOperations::do_spaceship_operation(const std::string& op, RuntimeValue* lval, RuntimeValue* rval) {
+flx_int RuntimeOperations::do_spaceship_operation(RuntimeValue* lval, RuntimeValue* rval) {
 	flx_float l = lval->is_float() ? lval->get_f() : lval->get_i();
 	flx_float r = rval->is_float() ? rval->get_f() : rval->get_i();
 
 	auto res = l <=> r;
+
 	if (res == std::strong_ordering::less) {
 		return flx_int(-1);
 	}
@@ -1614,6 +1618,11 @@ flx_int RuntimeOperations::do_spaceship_operation(const std::string& op, Runtime
 	else if (res == std::strong_ordering::greater) {
 		return flx_int(1);
 	}
+
+	throw std::runtime_error("[types] invalid spaceship result");
+
+	return 0;
+
 }
 
 flx_int RuntimeOperations::do_operation(flx_int lval, flx_int rval, const std::string& op) {

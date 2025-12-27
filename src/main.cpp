@@ -1,4 +1,4 @@
-﻿#ifdef linux
+#ifdef linux
 #include <locale.h>
 #elif defined(_WIN32)
 #include <Windows.h>

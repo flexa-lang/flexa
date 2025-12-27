@@ -118,8 +118,8 @@ std::shared_ptr<FunctionDefinition>& Scope::find_declared_function(
 					auto parameter = std::dynamic_pointer_cast<VariableDefinition>(it->second->parameters[i]);
 
 					if (parameter &&
-						(parameter->has_expr_default() && !parameter->get_expr_default()
-							|| parameter->has_pc_default() && !parameter->get_pc_default())) {
+						((parameter->has_expr_default() && !parameter->get_expr_default())
+							|| (parameter->has_pc_default() && !parameter->get_pc_default()))) {
 						found = false;
 						break;
 					}

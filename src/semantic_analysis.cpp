@@ -1,5 +1,7 @@
 #include "semantic_analysis.hpp"
 
+#include <limits>
+
 #include "exception_helper.hpp"
 #include "token.hpp"
 #include "md_builtin.hpp"
@@ -29,7 +31,7 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTModuleNode> astnode) {
 		try {
 			statement->accept(this);
 		}
-		catch (std::runtime_error ex) {
+		catch (const std::runtime_error& ex) {
 			if (exception) {
 				throw std::runtime_error(ex.what());
 			}
@@ -343,7 +345,6 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTFunctionCallNode> astnode) {
 void SemanticAnalyser::visit(std::shared_ptr<ASTFunctionDefinitionNode> astnode) {
 	const auto& current_module = current_module_stack.top();
 	std::shared_ptr<FunctionDefinition> decl_function = nullptr;
-	bool declared = false;
 	determine_object_type(astnode);
 
 	for (auto& param : astnode->parameters) {
@@ -470,13 +471,13 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTExitNode> astnode) {
 	}
 }
 
-void SemanticAnalyser::visit(std::shared_ptr<ASTContinueNode> astnode) {
+void SemanticAnalyser::visit(std::shared_ptr<ASTContinueNode>) {
 	if (!is_loop) {
 		throw std::runtime_error("continue must be inside a loop");
 	}
 }
 
-void SemanticAnalyser::visit(std::shared_ptr<ASTBreakNode> astnode) {
+void SemanticAnalyser::visit(std::shared_ptr<ASTBreakNode>) {
 	if (!is_loop && !is_switch) {
 		throw std::runtime_error("break must be inside a loop or switch");
 	}
@@ -611,7 +612,6 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTForNode> astnode) {
 
 void SemanticAnalyser::visit(std::shared_ptr<ASTForEachNode> astnode) {
 	const auto& current_module = current_module_stack.top();
-	const auto& name_space = current_module->name_space;
 
 	is_loop = true;
 
@@ -774,13 +774,11 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTTryCatchNode> astnode) {
 }
 
 void SemanticAnalyser::visit(std::shared_ptr<ASTThrowNode> astnode) {
-	const auto& current_module = current_module_stack.top();
-
 	astnode->error->accept(this);
 
-	if (!(current_expression.is_struct()
+	if (!((current_expression.is_struct()
 			&& current_expression.type_name_space == Constants::DEFAULT_NAMESPACE
-			&& current_expression.type_name == Constants::BUILTIN_STRUCT_NAMES[BuiltinStructs::BS_EXCEPTION]
+			&& current_expression.type_name == Constants::BUILTIN_STRUCT_NAMES[BuiltinStructs::BS_EXCEPTION])
 		|| current_expression.is_string())) {
 		throw std::runtime_error(
 			"expected "
@@ -791,7 +789,7 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTThrowNode> astnode) {
 	}
 }
 
-void SemanticAnalyser::visit(std::shared_ptr<ASTEllipsisNode> astnode) {}
+void SemanticAnalyser::visit(std::shared_ptr<ASTEllipsisNode>) {}
 
 void SemanticAnalyser::visit(std::shared_ptr<ASTWhileNode> astnode) {
 	is_loop = true;
@@ -902,7 +900,7 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTArrayConstructorNode> astnode) {
 	++current_expression_array_dim_max;
 	// if isn't reached max yet, we adds more one expr_dim
 	if (!is_max) {
-		current_expression_array_dim.push_back(-1);
+		current_expression_array_dim.push_back(std::numeric_limits<size_t>::max());
 	}
 
 	for (size_t i = 0; i < astnode->values.size(); ++i) {
@@ -927,7 +925,7 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTArrayConstructorNode> astnode) {
 	}
 
 	auto current_sim_index = current_expression_array_dim_max - 1;
-	if (current_expression_array_dim[current_sim_index] == -1) {
+	if (current_expression_array_dim[current_sim_index] == std::numeric_limits<size_t>::max()) {
 		current_expression_array_dim[current_sim_index] = arr_size;
 	}
 
@@ -1109,6 +1107,9 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTBinaryExprNode> astnode) {
 		case Type::T_STRING:
 			rt_lexpr->set(lexpr.s);
 			break;
+		default:
+			current_expression.is_constexpr = false;
+			return;
 		}
 
 		auto rt_rexpr = std::make_shared<RuntimeValue>(rexpr);
@@ -1129,6 +1130,9 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTBinaryExprNode> astnode) {
 		case Type::T_STRING:
 			rt_rexpr->set(rexpr.s);
 			break;
+		default:
+			current_expression.is_constexpr = false;
+			return;
 		}
 
 		std::shared_ptr<RuntimeValue> rt_res;
@@ -1157,6 +1161,9 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTBinaryExprNode> astnode) {
 		case Type::T_STRING:
 			current_expression.set_s(rt_res->get_s());
 			break;
+		default:
+			current_expression.is_constexpr = false;
+			return;
 		}
 
 	}
@@ -1243,7 +1250,7 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTTypeNode> astnode) {
 
 }
 
-void SemanticAnalyser::visit(std::shared_ptr<ASTNullNode> astnode) {
+void SemanticAnalyser::visit(std::shared_ptr<ASTNullNode>) {
 	current_expression = SemanticValue(TypeDefinition(Type::T_VOID));
 }
 
@@ -1656,10 +1663,10 @@ void SemanticAnalyser::determine_object_type(std::shared_ptr<TypeDefinition> typ
 
 	if (typedefinition->is_object()) {
 		std::shared_ptr<Scope> curr_scope;
-		if (curr_scope = get_inner_most_struct_definition_scope(current_module->name_space, current_module->name, typedefinition->type_name_space, typedefinition->type_name)) {
+		if ((curr_scope = get_inner_most_struct_definition_scope(current_module->name_space, current_module->name, typedefinition->type_name_space, typedefinition->type_name))) {
 			type = Type::T_STRUCT;
 		}
-		else if (curr_scope = get_inner_most_class_definition_scope(current_module->name_space, current_module->name, typedefinition->type_name_space, typedefinition->type_name)) {
+		else if ((curr_scope = get_inner_most_class_definition_scope(current_module->name_space, current_module->name, typedefinition->type_name_space, typedefinition->type_name))) {
 			type = Type::T_CLASS;
 		}
 		else {
