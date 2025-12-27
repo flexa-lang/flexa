@@ -152,7 +152,7 @@ void Window::draw_text(int x, int y, const std::string& text, Color color, Font*
 
 	std::wstring wtext(text.begin(), text.end());
 
-	TextOut(hdc_back_buffer, x, y, wtext.c_str(), wtext.length());
+	TextOut(hdc_back_buffer, x, y, wtext.c_str(), static_cast<int>(wtext.length()));
 
 	SelectObject(hdc_back_buffer, old_font);
 }

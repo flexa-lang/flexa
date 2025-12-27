@@ -280,7 +280,7 @@ std::shared_ptr<ASTBreakNode> Parser::parse_break_statement() {
 std::shared_ptr<ASTSwitchNode> Parser::parse_switch_statement() {
 	std::shared_ptr<ASTExprNode> condition;
 	std::map<std::shared_ptr<ASTExprNode>, size_t> case_blocks = std::map<std::shared_ptr<ASTExprNode>, size_t>();
-	long default_block = 0;
+	size_t default_block = 0;
 	std::vector<std::shared_ptr<ASTNode>> statements = std::vector<std::shared_ptr<ASTNode>>();
 	size_t row = current_token.row;
 	size_t col = current_token.col;
@@ -295,7 +295,7 @@ std::shared_ptr<ASTSwitchNode> Parser::parse_switch_statement() {
 	while (current_token.type == TK_CASE) {
 		consume_token();
 		std::shared_ptr<ASTExprNode> case_exrp = parse_expression();
-		int start_position = statements.size();
+		auto start_position = statements.size();
 		consume_token();
 		consume_token();
 

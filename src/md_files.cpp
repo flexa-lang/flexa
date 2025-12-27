@@ -55,7 +55,7 @@ void ModuleFiles::register_functions(VirtualMachine* vm) {
 		str["path"] = path_var;
 		str["mode"] = mode_var;
 
-		int parmode = vals[1]->get_i();
+		auto parmode = vals[1]->get_i();
 
 		std::fstream* fs = nullptr;
 		try {

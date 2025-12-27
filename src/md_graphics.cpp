@@ -382,13 +382,13 @@ void ModuleGraphics::register_functions(VirtualMachine* vm) {
 		str["orientation"] = orientation_var;
 
 		auto font = Font::create_font(
-			str["size"]->get_value()->get_i(),
+			static_cast<int>(str["size"]->get_value()->get_i()),
 			str["name"]->get_value()->get_s(),
-			str["weight"]->get_value()->get_i(),
+			static_cast<int>(str["weight"]->get_value()->get_i()),
 			str["italic"]->get_value()->get_b(),
 			str["underline"]->get_value()->get_b(),
 			str["strike"]->get_value()->get_b(),
-			str["orientation"]->get_value()->get_i()
+			static_cast<int>(str["orientation"]->get_value()->get_i())
 		);
 		if (!font) {
 			throw std::runtime_error("there was an error creating font");

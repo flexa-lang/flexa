@@ -75,8 +75,8 @@ void Lexer::tokenize() {
 Token Lexer::process_comment() {
 	std::string comment;
 	bool is_block = false;
-	int row = current_row;
-	int col = current_col;
+	auto row = current_row;
+	auto col = current_col;
 
 	comment += current_char;
 	advance();

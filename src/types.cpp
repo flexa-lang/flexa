@@ -1475,8 +1475,8 @@ RuntimeValue* RuntimeOperations::do_operation(const std::string& op, RuntimeValu
 		}
 
 		if (rval->is_numeric() && Token::is_equality_op(op)) {
-			flx_float l = lval->get_i();
-			flx_float r = rval->is_float() ? rval->get_f() : rval->get_i();
+			flx_float l = static_cast<flx_float>(lval->get_i());
+			flx_float r = rval->is_float() ? rval->get_f() : static_cast<flx_float>(rval->get_i());
 
 			return new RuntimeValue(flx_bool(op == "==" ? l == r : l != r));
 		}
@@ -1691,25 +1691,25 @@ flx_float RuntimeOperations::do_operation(flx_float lval, flx_float rval, const 
 		return lval * rval;
 	}
 	else if (op == "/=" || op == "/") {
-		if (int(rval) == 0) {
+		if (static_cast<int>(rval) == 0) {
 			throw std::runtime_error("division by zero encountered");
 		}
 		return lval / rval;
 	}
 	else if (op == "%=" || op == "%") {
-		if (int(rval) == 0) {
+		if (static_cast<int>(rval) == 0) {
 			throw std::runtime_error("remainder by zero is undefined");
 		}
 		return std::fmod(lval, rval);
 	}
 	else if (op == "/%=" || op == "/%") {
-		if (int(rval) == 0) {
+		if (static_cast<int>(rval) == 0) {
 			throw std::runtime_error("floor division by zero encountered");
 		}
 		return std::floor(lval / rval);
 	}
 	else if (op == "**=" || op == "**") {
-		return flx_int(std::pow(lval, rval));
+		return static_cast<flx_float>(std::pow(lval, rval));
 	}
 	throw std::runtime_error("invalid '" + op + "' operator");
 }

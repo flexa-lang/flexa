@@ -40,7 +40,7 @@ namespace interpreter {
 
 		void parse_args();
 
-		void throw_if_not_parameter(int argc, size_t i, std::string parameter);
+		void throw_if_not_parameter(size_t i, std::string parameter);
 
 	};
 

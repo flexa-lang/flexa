@@ -106,12 +106,12 @@ void ModuleDateTime::register_functions(VirtualMachine* vm) {
 				std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("sec"))->get_value()
 			};
 
-			tm.tm_year = vals[0]->get_i() - 1900;
-			tm.tm_mon = vals[1]->get_i() - 1;
-			tm.tm_mday = vals[2]->get_i();
-			tm.tm_hour = vals[3]->get_i();
-			tm.tm_min = vals[4]->get_i();
-			tm.tm_sec = vals[5]->get_i();
+			tm.tm_year = static_cast<int>(vals[0]->get_i() - 1900);
+			tm.tm_mon = static_cast<int>(vals[1]->get_i() - 1);
+			tm.tm_mday = static_cast<int>(vals[2]->get_i());
+			tm.tm_hour = static_cast<int>(vals[3]->get_i());
+			tm.tm_min = static_cast<int>(vals[4]->get_i());
+			tm.tm_sec = static_cast<int>(vals[5]->get_i());
 			t = mktime(&tm);
 		}
 
@@ -128,7 +128,7 @@ void ModuleDateTime::register_functions(VirtualMachine* vm) {
 
 		time_t lt = vals[0]->get_str()["timestamp"]->get_value()->get_i();
 		time_t rt = vals[1]->get_str()["timestamp"]->get_value()->get_i();
-		time_t t = difftime(lt, rt);
+		time_t t = static_cast<time_t>(difftime(lt, rt));
 		tm tm{};
 
 #ifdef linux

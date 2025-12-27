@@ -49,7 +49,7 @@ int main(int argc, const char* argv[]) {
 
 	auto sw = utils::ChronoStopwatch();
 	sw.start();
-	int result = interpreter.execute();
+	auto result = static_cast<int>(interpreter.execute());
 	sw.stop();
 
 	if (args.debug) {

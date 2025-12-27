@@ -20,7 +20,7 @@ namespace interpreter {
 	public:
 		FlexaInterpreter(const FlexaCliArgs& args);
 
-		int execute();
+		core::flx_int execute();
 
 	private:
 		FlexaSource load_module(const std::string& source);
@@ -32,7 +32,7 @@ namespace interpreter {
 			std::map<std::string, std::shared_ptr<core::ASTModuleNode>>* modules
 		);
 
-		int interpreter();
+		core::flx_int interpreter();
 
 	};
 

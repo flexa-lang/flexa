@@ -78,7 +78,7 @@ void ModuleConsole::register_functions(VirtualMachine* vm) {
 #elif defined(_WIN32)
 
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-		SetConsoleTextAttribute(hConsole, vals[0]->get_i() * 0x10 | vals[1]->get_i());
+		SetConsoleTextAttribute(hConsole, static_cast<WORD>(vals[0]->get_i()) * 0x10 | static_cast<WORD>(vals[1]->get_i()));
 
 #endif // linux
 
@@ -99,7 +99,7 @@ void ModuleConsole::register_functions(VirtualMachine* vm) {
 
 #elif defined(_WIN32)
 
-		COORD pos = { vals[0]->get_i(), vals[1]->get_i() };
+		COORD pos = { static_cast<SHORT>(vals[0]->get_i()), static_cast<SHORT>(vals[1]->get_i()) };
 		HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
 		SetConsoleCursorPosition(output, pos);
 
@@ -126,14 +126,14 @@ void ModuleConsole::register_functions(VirtualMachine* vm) {
 
 		auto nfontname = vals[0]->get_s();
 		auto pfontname = std::wstring(nfontname.begin(), nfontname.end());
-		int pwidth = vals[1]->get_i();
-		int pheight = vals[2]->get_i();
+		auto pwidth = vals[1]->get_i();
+		auto pheight = vals[2]->get_i();
 
 		CONSOLE_FONT_INFOEX cfi;
 		cfi.cbSize = sizeof(cfi);
 		cfi.nFont = 0;
-		cfi.dwFontSize.X = pwidth;
-		cfi.dwFontSize.Y = pheight;
+		cfi.dwFontSize.X = static_cast<SHORT>(pwidth);
+		cfi.dwFontSize.Y = static_cast<SHORT>(pheight);
 		cfi.FontFamily = FF_DONTCARE;
 		cfi.FontWeight = FW_NORMAL;
 #pragma warning(suppress : 4996)

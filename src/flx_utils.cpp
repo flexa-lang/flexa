@@ -69,25 +69,25 @@ void FlexaCliArgs::parse_args() {
 		}
 		if (arg == "-w" || arg == "--workspace") {
 			++i;
-			throw_if_not_parameter(args_size, i, arg);
+			throw_if_not_parameter(i, arg);
 			workspace_path = args[i];
 			continue;
 		}
 		if (arg == "-m" || arg == "--main") {
 			++i;
-			throw_if_not_parameter(args_size, i, arg);
+			throw_if_not_parameter(i, arg);
 			main_file = args[i];
 			continue;
 		}
 		if (arg == "-s" || arg == "--source") {
 			++i;
-			throw_if_not_parameter(args_size, i, arg);
+			throw_if_not_parameter(i, arg);
 			source_files.push_back(args[i]);
 			continue;
 		}
 		if (arg == "-l" || arg == "--libs") {
 			++i;
-			throw_if_not_parameter(args_size, i, arg);
+			throw_if_not_parameter(i, arg);
 			libs_path = args[i];
 			continue;
 		}
@@ -121,8 +121,8 @@ void FlexaCliArgs::parse_args() {
 
 }
 
-void FlexaCliArgs::throw_if_not_parameter(int argc, size_t i, std::string parameter) {
-	if (i >= static_cast<size_t>(argc)) {
+void FlexaCliArgs::throw_if_not_parameter(size_t i, std::string parameter) {
+	if (i >= args.size()) {
 		throw std::runtime_error("expected value after " + parameter);
 	}
 }

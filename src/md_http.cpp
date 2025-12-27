@@ -66,7 +66,7 @@ void ModuleHTTP::register_functions(VirtualMachine* vm) {
 		}
 
 		// get port
-		int param_port = config_str["port"]->get_value()->get_i();
+		auto param_port = config_str["port"]->get_value()->get_i();
 		if (param_port != 0) {
 			port = std::to_string(param_port);
 		}
@@ -124,7 +124,6 @@ void ModuleHTTP::register_functions(VirtualMachine* vm) {
 
 		WSADATA wsa;
 		SOCKET sock;
-		struct sockaddr_in server;
 		struct addrinfo* result = NULL;
 		struct addrinfo hints;
 
@@ -185,7 +184,7 @@ void ModuleHTTP::register_functions(VirtualMachine* vm) {
 		}
 
 		// send HTTP request
-		send(sock, request.c_str(), request.length(), 0);
+		send(sock, request.c_str(), static_cast<int>(request.length()), 0);
 
 		// receive responce
 		char buffer[8192];

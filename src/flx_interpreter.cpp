@@ -21,7 +21,7 @@ FlexaInterpreter::FlexaInterpreter(const FlexaCliArgs& args)
 	libs_root(utils::PathUtils::normalize_path_sep((args.libs_path.empty() ? utils::PathUtils::get_current_path() : args.libs_path) + "\\libs")),
 	args(args) {}
 
-int FlexaInterpreter::execute() {
+core::flx_int FlexaInterpreter::execute() {
 	if (!args.main_file.empty() || args.source_files.size() > 0) {
 		return interpreter();
 	}
@@ -82,7 +82,7 @@ void FlexaInterpreter::parse_modules(const std::vector<FlexaSource>& source_modu
 	}
 }
 
-int FlexaInterpreter::interpreter() {
+core::flx_int FlexaInterpreter::interpreter() {
 	FlexaSource main_module_src;
 	std::vector<FlexaSource> source_modules;
 	try {
@@ -118,7 +118,7 @@ int FlexaInterpreter::interpreter() {
 		SemanticAnalyser semantic_analyser(semantic_global_scope, main_module, modules, args.program_args);
 		semantic_analyser.start();
 
-		intmax_t result = 0;
+		core::flx_int result = 0;
 
 		// compile
 		Compiler compiler(main_module, modules);

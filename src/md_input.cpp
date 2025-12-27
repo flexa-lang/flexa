@@ -100,7 +100,7 @@ void ModuleInput::register_functions(VirtualMachine* vm) {
 		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("key"))->get_value();
 
-		int key = val->get_i();
+		auto key = val->get_i();
 
 		{
 			std::lock_guard<std::mutex> lock(state_mutex);
@@ -124,7 +124,7 @@ void ModuleInput::register_functions(VirtualMachine* vm) {
 		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("key"))->get_value();
 
-		int key = val->get_i();
+		auto key = val->get_i();
 
 		{
 			std::lock_guard<std::mutex> lock(state_mutex);
@@ -188,8 +188,8 @@ void ModuleInput::register_functions(VirtualMachine* vm) {
 			std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("y"))->get_value()
 		};
 
-		int x = vals[0]->get_i();
-		int y = vals[1]->get_i();
+		auto x = static_cast<int>(vals[0]->get_i());
+		auto y = static_cast<int>(vals[1]->get_i());
 		SetCursorPos(x, y);
 
 #endif // linux
@@ -211,7 +211,7 @@ void ModuleInput::register_functions(VirtualMachine* vm) {
 		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
 		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("button"))->get_value();
 
-		int button = val->get_i();
+		auto button = static_cast<int>(val->get_i());
 
 		is_pressed = (GetAsyncKeyState(button) & 0x8000) != 0;
 
