@@ -243,7 +243,12 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTFunctionCallNode> astnode) {
 	const auto& current_module = current_module_stack.top();
 	const auto& normalized_name_space = normalize_name_space(astnode->access_name_space, current_module->name_space);
 	bool strict = true;
+	bool self_call = astnode->identifier_vector.size() > 1 && astnode->identifier_vector[0].identifier == "self";
 	auto returned_expression = current_expression;
+
+	if (self_call && class_stack.empty()) {
+		throw std::runtime_error("'self' cannot be used outside class context");
+	}
 
 	std::vector<std::shared_ptr<TypeDefinition>> signature;
 
@@ -266,7 +271,7 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTFunctionCallNode> astnode) {
 
 	}
 	// handle subvalue call
-	else if (astnode->identifier_vector.size() > 1) {
+	else if (astnode->identifier_vector.size() > 1 && !self_call) {
 		auto idnode = std::make_shared<ASTIdentifierNode>(astnode->identifier_vector, normalized_name_space, astnode->row, astnode->col);
 		idnode->accept(this);
 
@@ -277,7 +282,10 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTFunctionCallNode> astnode) {
 	}
 	// handle regular call
 	else {
-		std::shared_ptr<Scope> curr_scope = get_inner_most_function_scope(current_module->name_space, current_module->name, normalized_name_space, astnode->identifier, &signature, strict);
+		std::shared_ptr<Scope> curr_scope = self_call ?
+			class_stack.top()
+			:
+			get_inner_most_function_scope(current_module->name_space, current_module->name, normalized_name_space, astnode->identifier, &signature, strict);
 
 		if (!curr_scope) {
 			strict = false;
@@ -370,6 +378,9 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTFunctionDefinitionNode> astnode)
 
 	if (astnode->block) {
 		auto has_return = returns(astnode->block);
+		if (astnode->identifier == "init" && has_return) {
+			throw std::runtime_error("class init cannot return");
+		}
 		astnode->type = astnode->is_void() && has_return ? Type::T_ANY : astnode->type;
 
 		if (astnode->identifier != "") {
@@ -1602,59 +1613,38 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTClassDefinitionNode> astnode) {
 		throw std::runtime_error("class '" + astnode->identifier + "' already defined");
 	}
 
-	// declare the class in the current scope
+	// Pass 1: Declare the class in the current scope
 	auto cls = std::make_shared<ClassDefinition>(astnode->identifier, astnode->declarations, astnode->functions);
 	current_scope->declare_class_definition(cls);
 
-	// first we process the constructor if any
-	for (const auto& constructor : astnode->functions) {
-		if (constructor->identifier == "init") {
-			if (returns(constructor->block) || !constructor->is_void()) {
-				throw std::runtime_error("constructors cannot have return");
-			}
-
-			push_scope(std::make_shared<Scope>(current_module->name_space, astnode->identifier));
-			class_stack.push(get_back_scope(current_module->name_space));
-
-			for (const auto& decl : astnode->declarations) {
-				decl->accept(this);
-			}
-
-			for (const auto& func : astnode->functions) {
-				if (func->identifier != "init") {
-					func->accept(this);
-				}
-			}
-
-			constructor->accept(this);
-
-			class_stack.pop();
-			pop_scope(current_module->name_space, astnode->identifier);
-		}
-	}
-
-	// then we process the rest of the class
+	// Create a new scope for the class
 	push_scope(std::make_shared<Scope>(current_module->name_space, astnode->identifier));
 	class_stack.push(get_back_scope(current_module->name_space));
 
+	// Pass 2: Declare member variables
 	for (const auto& decl : astnode->declarations) {
 		decl->accept(this);
 	}
 
+	// Pass 3: Declare function signatures
+	for (const auto& func : astnode->functions) {
+		auto func_decl = std::make_shared<ASTFunctionDefinitionNode>(*func);
+		func_decl->block = nullptr;
+		func_decl->accept(this);
+	}
+
+	// Pass 4: Analyze function bodies
 	for (const auto& func : astnode->functions) {
 		if (func->identifier == "init") {
-			auto constructor = std::make_shared<ASTFunctionDefinitionNode>(*func);
-			constructor->block = nullptr;
-			constructor->accept(this);
+			if (returns(func->block) || !func->is_void()) {
+				throw std::runtime_error("constructors cannot have return");
+			}
 		}
-		else {
-			func->accept(this);
-		}
+		func->accept(this);
 	}
 
 	class_stack.pop();
 	pop_scope(current_module->name_space, astnode->identifier);
-
 }
 
 void SemanticAnalyser::determine_object_type(std::shared_ptr<TypeDefinition> typedefinition) {
