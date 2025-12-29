@@ -54,7 +54,7 @@ namespace core {
 			
 			std::stack<RuntimeValueIterator> iterator_stack;
 			std::stack<std::shared_ptr<Scope>> class_stack;
-			size_t function_class_call_depth = 0;
+			std::stack<size_t> function_class_call_depth;
 			std::stack<std::shared_ptr<ClassDefinition>> class_def_build_stack;
 			std::stack<std::shared_ptr<StructDefinition>> struct_def_build_stack;
 			std::stack< std::shared_ptr<FunctionDefinition>> func_def_build_stack;

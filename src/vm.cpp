@@ -745,7 +745,7 @@ void VirtualMachine::handle_call() {
 					};
 					call_stack.push(curr_pc);
 
-					++function_class_call_depth;
+					function_class_call_depth.push(1);
 					return_namespace.push(std::make_pair(obj_as_scope->module_name_space, obj_as_scope->module_name));
 					return_stack.push(next_pc);
 					return_unwind_stack.push(0);
@@ -797,8 +797,8 @@ void VirtualMachine::handle_call() {
 
 	}
 
-	if (func_scope->is_class) {
-		++function_class_call_depth;
+	if (func_scope->is_class && !function_class_call_depth.empty()) {
+		++function_class_call_depth.top();
 	}
 
 	auto& declfun = func_scope->find_declared_function(identifier, &signature, strict);
@@ -846,8 +846,15 @@ void VirtualMachine::handle_call() {
 }
 
 void VirtualMachine::handle_return() {
-	--function_class_call_depth;
-	return_from_sub_run = current_instruction.operand.get_bool_operand() && !function_class_call_depth;
+	bool is_return_from_class = false;
+	if (!function_class_call_depth.empty()) {
+		--function_class_call_depth.top();
+		if (!function_class_call_depth.top()) {
+			function_class_call_depth.pop();
+			is_return_from_class = true;
+		}
+	}
+	return_from_sub_run = current_instruction.operand.get_bool_operand() && is_return_from_class;
 
 	next_pc = return_stack.top();
 	return_stack.pop();
@@ -1328,7 +1335,7 @@ void VirtualMachine::handle_store_var() {
 	auto name_space = params.at(0).get_string_operand();
 	auto identifier = params.at(1).get_string_operand();
 
-	RuntimeValue* new_value = get_evaluation_stack_top();
+	RuntimeValue* new_value = allocate_value(new RuntimeValue(get_evaluation_stack_top()));
 
 	TypeDefinition var_type_def = get_type_def();
 
