@@ -1,10 +1,14 @@
 using flx.core.console;
 
 // --------------------------------------------------
+// Game constants
+// --------------------------------------------------
+const BOARD_SIZE = 3;
+
+// --------------------------------------------------
 // TicTacToe game class
 // --------------------------------------------------
 class TicTacToe {
-	const BOARD_SIZE;
     var board: int[3][3];
     var current_player: int;
     var game_over: bool;
@@ -12,12 +16,10 @@ class TicTacToe {
 
     // Constructor
     init() {
-		BOARD_SIZE = 3;
         self.reset();
     }
 	
     init(size) {
-		BOARD_SIZE = size;
         self.reset();
     }
 

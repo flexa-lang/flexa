@@ -5,11 +5,13 @@
 
 using namespace core;
 
-Scope::Scope(std::string module_name_space, std::string module_name)
-	: module_name_space(module_name_space), module_name(module_name) {
+Scope::Scope(std::string module_name_space, std::string module_name, bool is_class)
+	: module_name_space(module_name_space), module_name(module_name), is_class(is_class) {
 }
 
-Scope::Scope() = default;
+Scope::Scope(bool is_class)
+	: is_class(is_class) {
+}
 
 Scope::~Scope() = default;
 
@@ -133,7 +135,7 @@ std::shared_ptr<FunctionDefinition>& Scope::find_declared_function(
 		}
 	}
 
-	throw std::runtime_error("something went wrong when determining the type of '" + identifier + "' function");
+	throw std::runtime_error("something went wrong when in the search of '" + identifier + "' function");
 }
 
 bool Scope::already_declared_class_definition(const std::string& identifier) {

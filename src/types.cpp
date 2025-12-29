@@ -37,11 +37,11 @@ const RuntimeValue* flx_array::operator[](flx_int index) const {
 }
 
 flx_class::flx_class(std::string module_name_space, std::string module_name)
-	: Scope(module_name_space, module_name) {
+	: Scope(module_name_space, module_name, true) {
 }
 
 flx_class::flx_class()
-	: Scope() {
+	: Scope(true) {
 }
 
 TypeDefinition::TypeDefinition(Type type, const std::vector<std::shared_ptr<ASTExprNode>>& expr_dim,

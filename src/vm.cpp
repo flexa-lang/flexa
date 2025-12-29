@@ -651,8 +651,13 @@ void VirtualMachine::handle_call() {
 
 	std::shared_ptr<Scope> func_scope;
 
+	// handle self invoke
+	if (is_self_invoke) {
+		is_self_invoke = false;
+		func_scope = class_stack.top();
+	}
 	// handle function return
-	if (identifier.empty()) {
+	else if (identifier.empty()) {
 		if (!returned_expression_value) {
 			ExceptionHelper::throw_undeclared_function("lambda", signature);
 		}
@@ -714,7 +719,15 @@ void VirtualMachine::handle_call() {
 						cls_const = obj_value->get_raw_cls()->find_declared_function("init", &signature, true);
 					}
 					catch (...) {
-						cls_const = obj_value->get_raw_cls()->find_declared_function("init", &signature, false);
+						try {
+							cls_const = obj_value->get_raw_cls()->find_declared_function("init", &signature, false);
+						}
+						catch (...) {
+							throw std::runtime_error("constructor '" +
+								ExceptionHelper::buid_signature("init", signature) +
+								"' was never declared in class '" +
+								obj_as_scope->module_name_space + "::" + obj_as_scope->module_name + "'");
+						}
 					}
 
 					push_vm_scope(std::make_shared<Scope>(obj_as_scope->module_name_space, obj_as_scope->module_name));
@@ -732,6 +745,7 @@ void VirtualMachine::handle_call() {
 					};
 					call_stack.push(curr_pc);
 
+					++function_class_call_depth;
 					return_namespace.push(std::make_pair(obj_as_scope->module_name_space, obj_as_scope->module_name));
 					return_stack.push(next_pc);
 					return_unwind_stack.push(0);
@@ -783,6 +797,10 @@ void VirtualMachine::handle_call() {
 
 	}
 
+	if (func_scope->is_class) {
+		++function_class_call_depth;
+	}
+
 	auto& declfun = func_scope->find_declared_function(identifier, &signature, strict);
 
 	push_vm_scope(std::make_shared<Scope>(func_scope->module_name_space, func_scope->module_name));
@@ -828,7 +846,8 @@ void VirtualMachine::handle_call() {
 }
 
 void VirtualMachine::handle_return() {
-	return_from_sub_run = current_instruction.operand.get_bool_operand();
+	--function_class_call_depth;
+	return_from_sub_run = current_instruction.operand.get_bool_operand() && !function_class_call_depth;
 
 	next_pc = return_stack.top();
 	return_stack.pop();

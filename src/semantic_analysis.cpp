@@ -1618,7 +1618,7 @@ void SemanticAnalyser::visit(std::shared_ptr<ASTClassDefinitionNode> astnode) {
 	current_scope->declare_class_definition(cls);
 
 	// Create a new scope for the class
-	push_scope(std::make_shared<Scope>(current_module->name_space, astnode->identifier));
+	push_scope(std::make_shared<Scope>(current_module->name_space, astnode->identifier, true));
 	class_stack.push(get_back_scope(current_module->name_space));
 
 	// Pass 2: Declare member variables

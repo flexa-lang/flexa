@@ -25,9 +25,10 @@ namespace core {
 	public:
 		std::string module_name_space;
 		std::string module_name;
+		bool is_class = false;
 
-		Scope(std::string module_name_space, std::string module_name);
-		Scope();
+		Scope(std::string module_name_space, std::string module_name, bool is_class = false);
+		Scope(bool is_class = false);
 		~Scope();
 
 		bool already_declared_variable(const std::string& identifier);

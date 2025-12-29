@@ -144,6 +144,8 @@ void Compiler::visit(std::shared_ptr<ASTReturnNode> astnode) {
 }
 
 void Compiler::visit(std::shared_ptr<ASTFunctionCallNode> astnode) {
+	bool self_call = astnode->identifier_vector.size() > 1 && astnode->identifier_vector[0].identifier == "self";
+	
 	for (const auto& param : astnode->parameters) {
 		param->accept(this);
 	}
@@ -151,10 +153,14 @@ void Compiler::visit(std::shared_ptr<ASTFunctionCallNode> astnode) {
 	auto identifier = astnode->identifier;
 
 	// handle function sub value access (inside structs or class function calls)
-	if (astnode->identifier_vector.size() > 1) {
+	if (astnode->identifier_vector.size() > 1 && !self_call) {
 		auto idnode = std::make_shared<ASTIdentifierNode>(astnode->identifier_vector, astnode->access_name_space, astnode->row, astnode->col);
 		idnode->accept(this);
 		identifier = ""; // set identifier empty as we already pushed function to stack
+	}
+
+	if (self_call) {
+		add_instruction(OpCode::OP_SELF_INVOKE);
 	}
 
 	add_instruction(OpCode::OP_CALL, std::vector<Operand>{
