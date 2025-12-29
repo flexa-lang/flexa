@@ -189,12 +189,12 @@ var game: TicTacToe = null;
 fun update() {
 	if (flx::is_mouse_button_pressed(flx::MOUSE_LEFT_BUTTON)) {
 		var mouse = flx::get_mouse_position();
-		// game.handle_click(mouse.x, mouse.y);
+		game.handle_click(mouse.x, mouse.y);
 	}
 
-	// if (game.game_over and flx::is_key_released(flx::KEY_SPACE)) {
-	// 	game.reset();
-	// }
+	if (game.game_over and flx::is_key_released(flx::KEY_SPACE)) {
+		game.reset();
+	}
 }
 
 // --------------------------------------------------
@@ -202,7 +202,7 @@ fun update() {
 // --------------------------------------------------
 fun render() {
 	flx::clear_screen(game_window, color_black);
-	// game.render();
+	game.render();
 	flx::update(game_window);
 }
 
