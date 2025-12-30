@@ -864,6 +864,9 @@ void VirtualMachine::handle_return() {
 			is_return_from_class = true;
 		}
 	}
+	else {
+		is_return_from_class = true;
+	}
 	return_from_sub_run = current_instruction.operand.get_bool_operand() && is_return_from_class;
 
 	next_pc = return_stack.top();
