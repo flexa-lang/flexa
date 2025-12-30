@@ -656,6 +656,10 @@ void VirtualMachine::handle_call() {
 		is_self_invoke = false;
 		func_scope = class_stack.top();
 	}
+	else if (is_from_class) {
+		is_from_class = false;
+		func_scope = class_stack.top();
+	}
 	// handle function return
 	else if (identifier.empty()) {
 		if (!returned_expression_value) {
@@ -797,11 +801,17 @@ void VirtualMachine::handle_call() {
 
 	}
 
-	if (func_scope->is_class && !function_class_call_depth.empty()) {
-		++function_class_call_depth.top();
-	}
-
 	auto& declfun = func_scope->find_declared_function(identifier, &signature, strict);
+
+	if (func_scope->is_class) {
+		// if not found as strict, try non-strict
+		if (!declfun) {
+			declfun = func_scope->find_declared_function(identifier, &signature, false);
+		}
+		if (!function_class_call_depth.empty()) {
+			++function_class_call_depth.top();
+		}
+	}
 
 	push_vm_scope(std::make_shared<Scope>(func_scope->module_name_space, func_scope->module_name));
 
@@ -1589,19 +1599,17 @@ void VirtualMachine::handle_load_sub_id() {
 	switch (val->type)
 	{
 	case Type::T_STRUCT: {
-		//auto str_def = find_inner_most_struct("", "", val->type_name_space, val->type_name);
-		//const auto& type_def = str_def->variables.at(id);
-
 		auto sub_value = val->get_field(id, get_use_variable_ref());
-		//sub_value->type_ref = type_def.get();
 		push_constant(sub_value);
 		break;
 	}
 	case Type::T_CLASS: {
 		if (instructions[next_pc].opcode == OP_CALL && instructions[next_pc].operand.get_vector_operand()[3].get_string_operand().empty()) {
-			auto fopnd = instructions[next_pc].operand.get_vector_operand();
-			fopnd[3] = Operand(id);
-			instructions[next_pc].operand = Operand(fopnd);
+			auto aux_next_pc = next_pc;
+			auto oop = instructions[aux_next_pc].operand.get_vector_operand();
+			auto nop = oop;
+			nop[3] = Operand(id);
+			instructions[aux_next_pc].operand = Operand(nop);
 
 			std::shared_ptr<flx_class> obj_as_scope = val->get_raw_cls();
 			class_stack.push(obj_as_scope);
@@ -1609,7 +1617,10 @@ void VirtualMachine::handle_load_sub_id() {
 
 			get_next();
 
+			is_from_class = true;
 			decode_operation();
+
+			instructions[aux_next_pc].operand = Operand(oop);
 
 			run();
 

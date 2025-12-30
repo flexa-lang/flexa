@@ -69,3 +69,20 @@ void BytecodeInstruction::write_bytecode_table(const std::vector<BytecodeInstruc
 
 	file.close();
 }
+
+void BytecodeInstruction::debug_instruction(const BytecodeInstruction& instruction) {
+	std::cout << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(instruction.opcode) << "\t";
+
+	std::cout << OP_NAMES.at(instruction.opcode);
+
+	std::cout << std::setw(22 - OP_NAMES.at(instruction.opcode).size()) << std::setfill(' ') << "\t" << std::dec;
+
+	if (instruction.operand.get_raw_operand() == nullptr) {
+		std::cout << "<NO_OP>";
+	}
+	else {
+		std::cout << instruction.operand.string();
+	}
+
+	std::cout << std::endl;
+}

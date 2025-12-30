@@ -73,6 +73,7 @@ namespace core {
 
 			bool return_from_sub_run = false;
 			bool is_self_invoke = false;
+			bool is_from_class = false;
 			std::stack<bool> use_variable_ref;
 
 			bool generated_error = false;

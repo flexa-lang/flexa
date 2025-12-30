@@ -31,6 +31,7 @@ namespace core {
 			const std::vector<BytecodeInstruction>& instructions,
 			const std::string& filename
 		);
+		static void debug_instruction(const BytecodeInstruction& instruction);
 	};
 
 }
