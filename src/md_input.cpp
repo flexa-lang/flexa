@@ -170,7 +170,7 @@ void ModuleInput::register_functions(VirtualMachine* vm) {
 		str["x"] = x_var;
 		str["y"] = y_var;
 
-		vm->push_new_constant(new RuntimeValue(str, "Point", Constants::STD_NAMESPACE));
+		vm->push_new_constant(new RuntimeValue(str, Constants::STD_NAMESPACE, "Point"));
 
 		};
 
