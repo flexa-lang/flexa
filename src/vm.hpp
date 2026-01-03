@@ -54,7 +54,6 @@ namespace core {
 			
 			std::stack<RuntimeValueIterator> iterator_stack;
 			std::stack<std::shared_ptr<Scope>> class_stack;
-			std::stack<size_t> function_class_call_depth;
 			std::stack<std::shared_ptr<ClassDefinition>> class_def_build_stack;
 			std::stack<std::shared_ptr<StructDefinition>> struct_def_build_stack;
 			std::stack< std::shared_ptr<FunctionDefinition>> func_def_build_stack;
@@ -71,7 +70,8 @@ namespace core {
 			bool set_check_build_array = false;
 			std::stack<TypeDefinition> type_def_stack;
 
-			bool return_from_sub_run = false;
+			std::stack<bool> return_from_sub_run;
+			bool check_return_from_sub_run = false;
 			bool is_self_invoke = false;
 			bool is_from_class = false;
 			std::stack<bool> use_variable_ref;
@@ -89,6 +89,7 @@ namespace core {
 			void unwind();
 			void unwind_scope();
 			void unwind_eval_stack();
+			void enter_sub_call(size_t new_pointer);
 
 			bool get_use_variable_ref();
 

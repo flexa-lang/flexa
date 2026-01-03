@@ -37,9 +37,19 @@ void VirtualMachine::run() {
 		try {
 			decode_operation();
 
-			if (return_from_sub_run) {
-				return_from_sub_run = false;
-				return;
+			// if there are a return to verify
+			if (check_return_from_sub_run) {
+				check_return_from_sub_run = false;
+
+				struct PopGuard {
+					std::stack<bool>& s;
+					~PopGuard() { s.pop(); }
+				} guard{ return_from_sub_run };
+
+				// if there are a return from sub, we return from sub call, else it's a normal return
+				if (return_from_sub_run.top()) {
+					return;
+				}
 			}
 		}
 		catch (const std::exception& ex) {
@@ -485,7 +495,7 @@ void VirtualMachine::decode_operation() {
 		next_pc = instructions.size();
 		break;
 	case OP_TRAP:
-		return_from_sub_run = true;
+		check_return_from_sub_run = true;
 		break;
 
 	case OP_ERROR:
@@ -656,6 +666,7 @@ void VirtualMachine::handle_call() {
 		is_self_invoke = false;
 		func_scope = class_stack.top();
 	}
+	// handle class
 	else if (is_from_class) {
 		is_from_class = false;
 		func_scope = class_stack.top();
@@ -699,8 +710,7 @@ void VirtualMachine::handle_call() {
 
 						if (var_def.second.get_pc_default() > 0) {
 							auto current_pc = next_pc;
-							next_pc = var_def.second.get_pc_default();
-							run();
+							enter_sub_call(var_def.second.get_pc_default());
 							next_pc = current_pc;
 							var->set_value(get_evaluation_stack_top());
 						}
@@ -749,20 +759,18 @@ void VirtualMachine::handle_call() {
 					};
 					call_stack.push(curr_pc);
 
-					function_class_call_depth.push(1);
 					return_namespace.push(std::make_pair(obj_as_scope->module_name_space, obj_as_scope->module_name));
 					return_stack.push(next_pc);
 					return_unwind_stack.push(0);
 					push_deep();
 
-					next_pc = cls_const->pointer;
-					run();
+					enter_sub_call(cls_const->pointer);
 
 					// after return from constructor
 					pop_constant(); // pop the constructor undefined return
 					class_stack.pop();
 					pop_vm_scope(obj_as_scope->module_name_space, obj_as_scope->module_name);
-					
+
 					push_new_constant(obj_value);
 
 					gc.remove_root_container(function_arguments);
@@ -806,10 +814,8 @@ void VirtualMachine::handle_call() {
 	if (func_scope->is_class) {
 		// if not found as strict, try non-strict
 		if (!declfun) {
-			declfun = func_scope->find_declared_function(identifier, &signature, false);
-		}
-		if (!function_class_call_depth.empty()) {
-			++function_class_call_depth.top();
+			strict = false;
+			declfun = func_scope->find_declared_function(identifier, &signature, strict);
 		}
 	}
 
@@ -842,6 +848,7 @@ void VirtualMachine::handle_call() {
 
 		push_deep();
 
+		return_from_sub_run.push(false);
 		next_pc = declfun->pointer;
 	}
 	else {
@@ -856,18 +863,7 @@ void VirtualMachine::handle_call() {
 }
 
 void VirtualMachine::handle_return() {
-	bool is_return_from_class = false;
-	if (!function_class_call_depth.empty()) {
-		--function_class_call_depth.top();
-		if (!function_class_call_depth.top()) {
-			function_class_call_depth.pop();
-			is_return_from_class = true;
-		}
-	}
-	else {
-		is_return_from_class = true;
-	}
-	return_from_sub_run = current_instruction.operand.get_bool_operand() && is_return_from_class;
+	check_return_from_sub_run = true;
 
 	next_pc = return_stack.top();
 	return_stack.pop();
@@ -955,8 +951,7 @@ void VirtualMachine::declare_function_block_parameters(
 			}
 
 			auto current_pc = next_pc;
-			next_pc = decl->get_pc_default();
-			run();
+			enter_sub_call(decl->get_pc_default());
 			next_pc = current_pc;
 			auto current_value = get_evaluation_stack_top();
 
@@ -1072,7 +1067,7 @@ void VirtualMachine::handle_next_element() {
 		}
 		auto arr_value = value->get_item(index++);
 		push_constant(arr_value);
-		
+
 	}
 	else if (value->is_string()) {
 		if (index >= value->get_s().size()) {
@@ -1232,7 +1227,7 @@ void VirtualMachine::handle_type_parse() {
 	case Type::T_STRING:
 		new_value->set(flx_string(RuntimeOperations::parse_value_to_string(value, true)));
 		break;
-		
+
 	default:
 		ExceptionHelper::throw_invalid_type_parse(type, value->type);
 		break;
@@ -1552,9 +1547,19 @@ void VirtualMachine::handle_load_var() {
 		auto variable = std::dynamic_pointer_cast<RuntimeVariable>(class_stack.top()->find_declared_variable(identifier));
 		auto value = variable->get_value(get_use_variable_ref());
 		push_constant(value);
+		return;
 	}
+
+	// handle class scope
+	if (!class_stack.empty() && class_stack.top()->already_declared_variable(identifier)) {
+		auto variable = std::dynamic_pointer_cast<RuntimeVariable>(class_stack.top()->find_declared_variable(identifier));
+		auto value = variable->get_value(get_use_variable_ref());
+		push_constant(value);
+		return;
+	}
+
 	// handle regular identifier
-	else if (const auto& id_scope = get_inner_most_variable_scope(module_name_space, module_name, name_space, identifier)) {
+	if (const auto& id_scope = get_inner_most_variable_scope(module_name_space, module_name, name_space, identifier)) {
 		auto variable = std::dynamic_pointer_cast<RuntimeVariable>(id_scope->find_declared_variable(identifier));
 		auto value = variable->get_value(get_use_variable_ref());
 		push_constant(value);
@@ -1625,7 +1630,7 @@ void VirtualMachine::handle_load_sub_id() {
 
 			instructions[aux_next_pc].operand = Operand(oop);
 
-			run();
+			enter_sub_call(next_pc);
 
 			class_stack.pop();
 			pop_vm_scope(obj_as_scope->module_name_space, obj_as_scope->module_name);
@@ -1847,6 +1852,12 @@ std::shared_ptr<Scope> VirtualMachine::find_declared_function_strict(const std::
 
 	return func_scope;
 
+}
+
+void VirtualMachine::enter_sub_call(size_t new_pointer) {
+	return_from_sub_run.push(true);
+	next_pc = new_pointer;
+	run();
 }
 
 DebugInfo VirtualMachine::get_debug_info(size_t dbg_pc) {

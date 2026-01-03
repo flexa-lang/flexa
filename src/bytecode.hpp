@@ -32,6 +32,7 @@ namespace core {
 			const std::string& filename
 		);
 		static void debug_instruction(const BytecodeInstruction& instruction);
+		static std::string string_instruction(const BytecodeInstruction& instruction);
 	};
 
 }
