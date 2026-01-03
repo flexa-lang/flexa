@@ -140,7 +140,7 @@ void Compiler::visit(std::shared_ptr<ASTReturnNode> astnode) {
 		add_instruction(OpCode::OP_PUSH_UNDEFINED);
 	}
 
-	add_instruction(OpCode::OP_RETURN, flx_bool(false));
+	add_instruction(OpCode::OP_RETURN);
 }
 
 void Compiler::visit(std::shared_ptr<ASTFunctionCallNode> astnode) {
@@ -235,7 +235,7 @@ void Compiler::visit(std::shared_ptr<ASTFunctionDefinitionNode> astnode) {
 
 		// it will return to prev
 		add_instruction(OpCode::OP_PUSH_UNDEFINED);
-		add_instruction(OpCode::OP_RETURN, astnode->is_class_function);
+		add_instruction(OpCode::OP_RETURN);
 
 		replace_operand(endblock_jmp_ptr, pointer);
 	}

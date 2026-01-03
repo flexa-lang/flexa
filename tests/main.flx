@@ -1,5 +1,3 @@
-
-
 class Super {
 	var foo;
 
@@ -1699,7 +1697,7 @@ if (os.name == "windows") {
 	flx::destroy_window(window1);
 	flx::destroy_window(window2);
 
- } else {
+} else {
 	println("Graphics is only available on Windows OS.");
 
 }

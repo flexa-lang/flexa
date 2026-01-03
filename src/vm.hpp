@@ -71,7 +71,9 @@ namespace core {
 			bool set_check_build_array = false;
 			std::stack<TypeDefinition> type_def_stack;
 
-			bool return_from_sub_run = false;
+			size_t return_from_sub_run = 0;
+			bool force_return_from_sub_run = false;
+			bool check_return_from_sub_run = false;
 			bool is_self_invoke = false;
 			bool is_from_class = false;
 			std::stack<bool> use_variable_ref;
