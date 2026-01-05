@@ -1,4 +1,5 @@
 #include <fstream>
+#include <sstream>
 #include <iomanip>
 
 #include "bytecode.hpp"
@@ -85,4 +86,25 @@ void BytecodeInstruction::debug_instruction(const BytecodeInstruction& instructi
 	}
 
 	std::cout << std::endl;
+}
+
+std::string BytecodeInstruction::string_instruction(const BytecodeInstruction& instruction) {
+	std::ostringstream buffer;
+	
+	buffer << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(instruction.opcode) << "\t";
+
+	buffer << OP_NAMES.at(instruction.opcode);
+
+	buffer << std::setw(22 - OP_NAMES.at(instruction.opcode).size()) << std::setfill(' ') << "\t" << std::dec;
+
+	if (instruction.operand.get_raw_operand() == nullptr) {
+		buffer << "<NO_OP>";
+	}
+	else {
+		buffer << instruction.operand.string();
+	}
+
+	buffer << std::endl;
+
+	return buffer.str();
 }
