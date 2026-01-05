@@ -1,5 +1,5 @@
-using flx.core.console;
 using flx.std.strings;
+using flx.core.os;
 
 // --------------------------------------------------
 // Game constants
@@ -10,207 +10,227 @@ const BOARD_SIZE = 3;
 // TicTacToe game class
 // --------------------------------------------------
 class TicTacToe {
-    var board: int[3][3] = { 0 };
-    var current_player: int;
-    var game_over: bool;
-    var winner: int;
+	var board: int[3][3] = { 0 };
+	var current_player: int;
+	var game_over: bool;
+	var winner: int;
 
-    // Constructor
-    init() {
-        self.reset();
-    }
-	
-    init(size) {
-        self.reset();
-    }
+	var cursor_row: int;
+	var cursor_col: int;
 
-    // Reset the game state
-    fun reset() {
-        for (var row = 0; row < BOARD_SIZE; row++) {
-            for (var col = 0; col < BOARD_SIZE; col++) {
-                self.board[row][col] = 0;
-            }
-        }
+	// Constructor
+	init() {
+		self.reset();
+	}
 
-        self.current_player = 1; // 1 = X, 2 = O
-        self.game_over = false;
-        self.winner = 0;
-    }
+	// Reset the game state
+	fun reset() {
+		for (var r = 0; r < BOARD_SIZE; r++) {
+			for (var c = 0; c < BOARD_SIZE; c++) {
+				self.board[r][c] = 0;
+			}
+		}
 
-    // Main game loop
-    fun run() {
-        println("=== Tic-Tac-Toe (Console) ===");
+		self.current_player = 1; // 1 = X, 2 = O
+		self.game_over = false;
+		self.winner = 0;
 
-        while (not self.game_over) {
-            self.print_board();
-            self.print_turn_info();
-            self.handle_input();
-            self.update_game_state();
-        }
+		self.cursor_row = 0;
+		self.cursor_col = 0;
+	}
 
-        self.print_board();
-        self.print_result();
-    }
+	// Main game loop
+	fun run() {
+		println("=== Tic-Tac-Toe (Console) ===");
+		println("Use arrow keys to move, ENTER to place.");
 
-    // Print the current board state
-    fun print_board() {
-        println("");
+		while (not self.game_over) {
+			self.render();
+			self.handle_input();
+		}
 
-        for (var row = 0; row < BOARD_SIZE; row++) {
-            var line = "";
+		self.render();
+		self.print_result();
+	}
 
-            for (var col = 0; col < BOARD_SIZE; col++) {
-                var cell = self.board[row][col];
+	// Render the board with cursor highlight
+	fun render() {
+		self.clear();
+		println("");
 
-                if (cell == 1) {
-                    line += " X ";
-                }
-                else if (cell == 2) {
-                    line += " O ";
-                }
-                else {
-                    line += " . ";
-                }
+		for (var r = 0; r < BOARD_SIZE; r++) {
+			var line = "";
 
-                if (col < BOARD_SIZE - 1) {
-                    line += "|";
-                }
-            }
+			for (var c = 0; c < BOARD_SIZE; c++) {
+				var cell = self.board[r][c];
+				var symbol = " ";
 
-            println(line);
+				if (cell == 1) {
+					symbol = "X";
+				}
+				else if (cell == 2) {
+					symbol = "O";
+				}
+				// print();
+				if (r == self.cursor_row and c == self.cursor_col) {
+					line += "[" + symbol + "]";
+				} else {
+					line += " " + symbol + " ";
+				}
 
-            if (row < BOARD_SIZE - 1) {
-                println("---+---+---");
-            }
-        }
+				if (c < BOARD_SIZE - 1) {
+					line += "|";
+				}
+			}
 
-        println("");
-    }
+			println(line);
 
-    // Print whose turn it is
-    fun print_turn_info() {
-        var player = self.current_player == 1 ? "X" : "O";
-        println("Current player: " + player);
-        println("Enter row and column (0-2), separated by space:");
-    }
+			if (r < BOARD_SIZE - 1) {
+				println("---+---+---");
+			}
+		}
 
-    // Handle user input
-    fun handle_input() {
-        while (true) {
-            var input = read();
-            var parts = flx::split(input, " ");
+		println("");
+		var p = self.current_player == 1 ? "X" : "O";
+		println("Current player: " + p);
+	}
 
-            if (len(parts) != 2) {
-                println("Invalid input. Use: row col");
-                continue;
-            }
+	// Handle keyboard input (single key)
+	fun handle_input() {
+		var input = int(readch());
 
-            var row = int(parts[0]);
-            var col = int(parts[1]);
+		if (input == 72) {
+			// Up
+			if (self.cursor_row > 0) {
+				self.cursor_row -= 1;
+			}
+		}
+		else if (input == 80) {
+			// Down
+			if (self.cursor_row < BOARD_SIZE - 1) {
+				self.cursor_row += 1;
+			}
+		}
+		else if (input == 75) {
+			// Left
+			if (self.cursor_col > 0) {
+				self.cursor_col -= 1;
+			}
+		}
+		else if (input == 77) {
+			// Right
+			if (self.cursor_col < BOARD_SIZE - 1) {
+				self.cursor_col += 1;
+			}
+		}
+		else if (input == 13) {
+			// Enter: try to place mark
+			self.try_place();
+		}
+		else {
+			// Ignore other keys
+		}
+	}
 
-            if (row < 0 or row >= BOARD_SIZE or col < 0 or col >= BOARD_SIZE) {
-                println("Coordinates out of range. Try again.");
-                continue;
-            }
+	// Try to place the current player's mark
+	fun try_place() {
+		if (self.board[self.cursor_row][self.cursor_col] != 0) {
+			return;
+		}
 
-            if (self.board[row][col] != 0) {
-                println("Cell already occupied. Try again.");
-                continue;
-            }
+		self.board[self.cursor_row][self.cursor_col] = self.current_player;
 
-            self.board[row][col] = self.current_player;
-            break;
-        }
-    }
+		if (self.check_winner()) {
+			self.game_over = true;
+			self.winner = self.current_player;
+			return;
+		}
 
-    // Update the game state after a move
-    fun update_game_state() {
-        if (self.check_winner()) {
-            self.game_over = true;
-            self.winner = self.current_player;
-            return;
-        }
+		if (self.is_draw()) {
+			self.game_over = true;
+			self.winner = 0;
+			return;
+		}
 
-        if (self.is_draw()) {
-            self.game_over = true;
-            self.winner = 0;
-            return;
-        }
+		self.switch_player();
+	}
 
-        self.switch_player();
-    }
+	// Switch players
+	fun switch_player() {
+		self.current_player = self.current_player == 1 ? 2 : 1;
+	}
 
-    // Switch between players
-    fun switch_player() {
-        self.current_player = self.current_player == 1 ? 2 : 1;
-    }
+	// Check for a winner
+	fun check_winner(): bool {
+		for (var i = 0; i < 3; i++) {
+			if (self.board[i][0] != 0 and
+				self.board[i][0] == self.board[i][1] and
+				self.board[i][1] == self.board[i][2]) {
+				return true;
+			}
 
-    // Check if the current player won
-    fun check_winner(): bool {
-        // Rows
-        for (var i = 0; i < 3; i++) {
-            if (self.board[i][0] != 0 and
-                self.board[i][0] == self.board[i][1] and
-                self.board[i][1] == self.board[i][2]) {
-                return true;
-            }
-        }
+			if (self.board[0][i] != 0 and
+				self.board[0][i] == self.board[1][i] and
+				self.board[1][i] == self.board[2][i]) {
+				return true;
+			}
+		}
 
-        // Columns
-        for (var j = 0; j < 3; j++) {
-            if (self.board[0][j] != 0 and
-                self.board[0][j] == self.board[1][j] and
-                self.board[1][j] == self.board[2][j]) {
-                return true;
-            }
-        }
+		if (self.board[0][0] != 0 and
+			self.board[0][0] == self.board[1][1] and
+			self.board[1][1] == self.board[2][2]) {
+			return true;
+		}
 
-        // Diagonals
-        if (self.board[0][0] != 0 and
-            self.board[0][0] == self.board[1][1] and
-            self.board[1][1] == self.board[2][2]) {
-            return true;
-        }
+		if (self.board[0][2] != 0 and
+			self.board[0][2] == self.board[1][1] and
+			self.board[1][1] == self.board[2][0]) {
+			return true;
+		}
 
-        if (self.board[0][2] != 0 and
-            self.board[0][2] == self.board[1][1] and
-            self.board[1][1] == self.board[2][0]) {
-            return true;
-        }
+		return false;
+	}
 
-        return false;
-    }
+	// Check draw
+	fun is_draw(): bool {
+		for (var r = 0; r < 3; r++) {
+			for (var c = 0; c < 3; c++) {
+				if (self.board[r][c] == 0) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
 
-    // Check if the board is full
-    fun is_draw(): bool {
-        for (var row = 0; row < 3; row++) {
-            for (var col = 0; col < 3; col++) {
-                if (self.board[row][col] == 0) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
+	// Print final result
+	fun print_result() {
+		println("");
 
-    // Print the final result
-    fun print_result() {
-        if (self.winner == 0) {
-            println("Game ended in a draw.");
-        }
-        else {
-            var player = self.winner == 1 ? "X" : "O";
-            println("Player " + player + " wins!");
-        }
-    }
+		if (self.winner == 0) {
+			println("Game ended in a draw.");
+		}
+		else {
+			var p = self.winner == 1 ? "X" : "O";
+			println("Player " + p + " wins!");
+		}
+	}
+
+	fun clear() {
+		if (flx::os.name == "windows") {
+			system("cls");
+		} else if (flx::os.name == "linux") {
+			system("clear");
+		}
+	}
 }
 
 // --------------------------------------------------
 // Main entry point
 // --------------------------------------------------
 fun main() {
-    var game = TicTacToe();
-    game.run();
+	var game = TicTacToe();
+	game.run();
 }
 
 main();

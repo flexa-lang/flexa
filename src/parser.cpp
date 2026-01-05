@@ -383,7 +383,9 @@ std::shared_ptr<ASTIfNode> Parser::parse_if_statement() {
 				else_ifs.push_back(parse_else_if_statement());
 				if (next_token.type == TK_ELSE) {
 					consume_token(TK_ELSE);
+					continue;
 				}
+				break;
 			} while (next_token.type == TK_IF);
 		}
 
