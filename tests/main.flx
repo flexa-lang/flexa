@@ -1617,12 +1617,12 @@ show_console(false);
 show_console(true);
 
 
-/////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////
 
 
 using flx.core.graphics;
 
-if (os.name == "windows") {
+if (flx::os.name == "windows") {
 	println("starting graphics test-------------------------------------------------------------");
 
 	var window1: flx::Window = flx::create_window("Flexa Graphics 1", 800, 450);
@@ -1641,6 +1641,16 @@ if (os.name == "windows") {
 	while (not flx::is_quit(window1) or not flx::is_quit(window2)) {
 		if (not flx::is_quit(window1)) {
 			flx::clear_screen(window1, flx::Color{r=0,g=0,b=0});
+
+			if (flx::is_mouse_down(window1, 0)) {
+				var gpos = flx::get_mouse_position();
+				var xpos = flx::mouse_x(window1);
+				var ypos = flx::mouse_y(window1);
+
+				var text = `Mouse is down at global position (${gpos.x},${gpos.y}), window position (${xpos}, ${ypos})`;
+
+				flx::draw_text(window1, 50, 50, text, flx::Color{r=255,g=255,b=255}, font);
+			}
 
 			flx::draw_pixel(window1, 100, 50, flx::Color{r=255,g=0,b=0});
 			flx::draw_pixel(window1, 101, 50, flx::Color{r=255,g=0,b=0});

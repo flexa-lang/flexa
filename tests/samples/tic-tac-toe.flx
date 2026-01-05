@@ -187,9 +187,8 @@ var game: TicTacToe = null;
 // Update loop
 // --------------------------------------------------
 fun update() {
-	if (flx::is_mouse_button_pressed(flx::MOUSE_LEFT_BUTTON)) {
-		var mouse = flx::get_mouse_position();
-		game.handle_click(mouse.x, mouse.y);
+	if (flx::is_mouse_down(game_window, 0)) {
+		game.handle_click(flx::mouse_x(game_window), flx::mouse_y(game_window));
 	}
 
 	if (game.game_over and flx::is_key_released(flx::KEY_SPACE)) {

@@ -41,6 +41,11 @@ void ModuleGraphics::register_functions(SemanticAnalyser* visitor) {
 	visitor->builtin_functions["destroy_font"] = nullptr;
 	visitor->builtin_functions["destroy_image"] = nullptr;
 	visitor->builtin_functions["is_quit"] = nullptr;
+	visitor->builtin_functions["is_key_down"] = nullptr;
+	visitor->builtin_functions["is_mouse_down"] = nullptr;
+	visitor->builtin_functions["mouse_x"] = nullptr;
+	visitor->builtin_functions["mouse_y"] = nullptr;
+	visitor->builtin_functions["mouse_wheel"] = nullptr;
 }
 
 void ModuleGraphics::register_functions(VirtualMachine* vm) {
@@ -633,6 +638,93 @@ void ModuleGraphics::register_functions(VirtualMachine* vm) {
 			val->set(flx_bool(true));
 		}
 		vm->push_constant(val);
+
+		};
+
+	vm->builtin_functions["is_key_down"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("window"))->get_value();
+		auto key = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("key"))->get_value();
+
+		if (val->is_void()) {
+			throw std::runtime_error("Window is null");
+		}
+		if (!val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i()) {
+			throw std::runtime_error("Window is corrupted");
+		}
+
+		auto win = (Window*)val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i();
+
+		vm->push_new_constant(new RuntimeValue(flx_bool(win->is_key_down(static_cast<int>(key->get_i())))));
+
+		};
+
+	vm->builtin_functions["is_mouse_down"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("window"))->get_value();
+		auto btn = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("button"))->get_value();
+
+		if (val->is_void()) {
+			throw std::runtime_error("Window is null");
+		}
+		if (!val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i()) {
+			throw std::runtime_error("Window is corrupted");
+		}
+
+		auto win = (Window*)val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i();
+
+		vm->push_new_constant(new RuntimeValue(flx_bool(win->is_mouse_down(static_cast<int>(btn->get_i())))));
+
+		};
+
+	vm->builtin_functions["mouse_x"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("window"))->get_value();
+
+		if (val->is_void()) {
+			throw std::runtime_error("Window is null");
+		}
+		if (!val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i()) {
+			throw std::runtime_error("Window is corrupted");
+		}
+
+		auto win = (Window*)val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i();
+
+		vm->push_new_constant(new RuntimeValue(flx_int(win->mouse_x())));
+
+		};
+
+	vm->builtin_functions["mouse_y"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("window"))->get_value();
+
+		if (val->is_void()) {
+			throw std::runtime_error("Window is null");
+		}
+		if (!val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i()) {
+			throw std::runtime_error("Window is corrupted");
+		}
+
+		auto win = (Window*)val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i();
+
+		vm->push_new_constant(new RuntimeValue(flx_int(win->mouse_y())));
+
+		};
+
+	vm->builtin_functions["mouse_wheel"] = [this, vm]() {
+		auto scope = vm->get_back_scope(Constants::STD_NAMESPACE);
+		auto val = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("window"))->get_value();
+
+		if (val->is_void()) {
+			throw std::runtime_error("Window is null");
+		}
+		if (!val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i()) {
+			throw std::runtime_error("Window is corrupted");
+		}
+
+		auto win = (Window*)val->get_str()[INSTANCE_ID_NAME]->get_value()->get_i();
+
+		vm->push_new_constant(new RuntimeValue(flx_int(win->mouse_wheel())));
 
 		};
 

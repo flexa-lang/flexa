@@ -4,6 +4,7 @@
 #if defined(_WIN32)
 
 #include <Windows.h>
+#include <windowsx.h>
 #include <map>
 #include <string>
 
@@ -35,6 +36,17 @@ namespace core {
 				bool italic = false, bool underline = false, bool strike = false, int orientation = 0);
 		};
 
+		struct KeyboardState {
+			bool keys[256]{};
+		};
+
+		struct MouseState {
+			int x = 0;
+			int y = 0;
+			bool buttons[3]{};
+			int wheel_delta = 0;
+		};
+
 		class Window {
 		private:
 			HWND hwnd;
@@ -46,6 +58,9 @@ namespace core {
 			bool quit = false;
 
 			static std::map<HWND, Window*> hwnd_map;
+
+			KeyboardState keyboard;
+			MouseState mouse;
 
 		public:
 			Window();
@@ -66,6 +81,12 @@ namespace core {
 			void fill_circle(int xc, int yc, int radius, Color color);
 			void update();
 			bool is_quit();
+
+			bool is_key_down(int vk) const;
+			bool is_mouse_down(int button) const;
+			int mouse_x() const;
+			int mouse_y() const;
+			int mouse_wheel() const;
 
 		private:
 			void resize_back_buffer();

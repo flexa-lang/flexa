@@ -109,6 +109,8 @@ int Window::get_height() {
 
 void Window::clear_screen(Color color) {
 	if (msg.message != WM_QUIT) {
+		mouse.wheel_delta = 0;
+
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -242,6 +244,26 @@ void Window::resize_back_buffer() {
 	SelectObject(hdc_back_buffer, hbm_back_buffer);
 }
 
+bool Window::is_key_down(int vk) const {
+	return keyboard.keys[vk & 0xFF];
+}
+
+bool Window::is_mouse_down(int button) const {
+	return mouse.buttons[button];
+}
+
+int Window::mouse_x() const {
+	return mouse.x;
+}
+
+int Window::mouse_y() const {
+	return mouse.y;
+}
+
+int Window::mouse_wheel() const {
+	return mouse.wheel_delta;
+}
+
 LRESULT Window::handle_message(UINT umsg, WPARAM wparam, LPARAM lparam) {
 	switch (umsg) {
 	case WM_SIZE: {
@@ -252,6 +274,7 @@ LRESULT Window::handle_message(UINT umsg, WPARAM wparam, LPARAM lparam) {
 		resize_back_buffer();
 		break;
 	}
+
 	case WM_CLOSE:
 	case WM_DESTROY:
 		hwnd_map.erase(hwnd);
@@ -260,6 +283,7 @@ LRESULT Window::handle_message(UINT umsg, WPARAM wparam, LPARAM lparam) {
 		}
 		quit = true;
 		return 0;
+
 	case WM_PAINT: {
 		PAINTSTRUCT ps;
 		BeginPaint(hwnd, &ps);
@@ -267,6 +291,32 @@ LRESULT Window::handle_message(UINT umsg, WPARAM wparam, LPARAM lparam) {
 		EndPaint(hwnd, &ps);
 		return 0;
 	}
+
+	case WM_KEYDOWN:
+		keyboard.keys[wparam & 0xFF] = true;
+		break;
+	case WM_KEYUP:
+		keyboard.keys[wparam & 0xFF] = false;
+		break;
+
+	case WM_MOUSEMOVE:
+		mouse.x = GET_X_LPARAM(lparam);
+		mouse.y = GET_Y_LPARAM(lparam);
+		break;
+
+	case WM_LBUTTONDOWN: mouse.buttons[0] = true; break;
+	case WM_LBUTTONUP:   mouse.buttons[0] = false; break;
+
+	case WM_RBUTTONDOWN: mouse.buttons[1] = true; break;
+	case WM_RBUTTONUP:   mouse.buttons[1] = false; break;
+
+	case WM_MBUTTONDOWN: mouse.buttons[2] = true; break;
+	case WM_MBUTTONUP:   mouse.buttons[2] = false; break;
+
+	case WM_MOUSEWHEEL:
+		mouse.wheel_delta = GET_WHEEL_DELTA_WPARAM(wparam);
+		break;
+
 	}
 	return DefWindowProc(hwnd, umsg, wparam, lparam);
 }
