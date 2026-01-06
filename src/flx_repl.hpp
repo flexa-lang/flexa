@@ -6,9 +6,9 @@
 #include "flx_utils.hpp"
 
 #ifdef linux
-#define clear_screen() system("clear")
+#define clear_screen() std::ignore = system("clear")
 #elif defined(_WIN32)
-#define clear_screen() system("cls")
+#define clear_screen() std::ignore = system("cls")
 #endif // !linux
 
 namespace interpreter {

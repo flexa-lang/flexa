@@ -55,7 +55,7 @@ int main(int argc, const char* argv[]) {
 	if (args.debug) {
 		std::cout << std::endl << "execution time: " << sw.get_elapsed_formatted() << std::endl;
 		std::cout << "process finished with exit code " << result << std::endl;
-		system("pause");
+		std::ignore = system("pause");
 	}
 
 	return result;

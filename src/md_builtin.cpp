@@ -4,6 +4,7 @@
 #include <thread>
 #if defined(_WIN32)
 #include <conio.h>
+#include <sys/wait.h>
 #endif // defined(_WIN32)
 
 #include "types.hpp"
@@ -214,9 +215,39 @@ void ModuleBuiltin::register_functions(VirtualMachine* vm) {
 		auto var = std::dynamic_pointer_cast<RuntimeVariable>(scope->find_declared_variable("cmd"));
 		auto cmd = var->get_value()->get_s();
 
-		system(cmd.c_str());
+		int rc = system(cmd.c_str());
 
-		vm->push_empty_constant(Type::T_UNDEFINED);
+		flx_int res = rc;
+
+#ifdef linux
+
+		if (rc == -1) {
+			// failed to execute the command (fork failed, etc.)
+			res = -1; // or handle error appropriately
+		} 
+		else if (WIFEXITED(rc)) {
+			// normal termination
+			res = WEXITSTATUS(rc);
+		} 
+		else if (WIFSIGNALED(rc)) {
+			// terminated by signal
+			int signal_num = WTERMSIG(rc);
+			// return -signal_num or handle as needed
+			res = -signal_num;
+		} 
+		else if (WIFSTOPPED(rc)) {
+			// process stopped (if using WUNTRACED)
+			int signal_num = WSTOPSIG(rc);
+			res = -signal_num;
+		} 
+		else {
+			// other cases (shouldn't happen normally)
+			res = -1;
+		}
+
+#endif
+
+		vm->push_new_constant(new RuntimeValue(res));
 
 		};
 
@@ -435,7 +466,7 @@ void ModuleBuiltin::build_decls() {
 	parameters.push_back(variable);
 	func_decls[BuiltinFuncs::BF_SYSTEM] = std::make_shared<FunctionDefinition>(
 		Constants::BUILTIN_FUNCTION_NAMES[BuiltinFuncs::BF_SYSTEM],
-		Type::T_VOID, parameters, std::make_shared<ASTBlockNode>(
+		Type::T_INT, parameters, std::make_shared<ASTBlockNode>(
 			std::vector<std::shared_ptr<ASTNode>>{}, 0, 0
 		)
 	);
