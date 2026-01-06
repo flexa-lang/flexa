@@ -138,7 +138,7 @@ fun update() {
 
 }
 
-fun get_color(val: int): Color {
+fun get_color(val: int): flx::Color {
     switch (val) {
     case 2:
         return color_2;

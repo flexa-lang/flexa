@@ -82,8 +82,10 @@ fun init_game() {
     var start_y = 50;
     
     for (var col = 0; col < enemy_cols; col++) {
+		println("Initializing enemy column ", col);
         for (var row = 0; row < enemy_rows; row++) {
-            enemies[row][col] = Enemy{
+			println("Initializing enemy row ", row);
+            enemies[col][row] = Enemy{
                 x=start_x + col * (enemy_width + enemy_padding),
                 y=start_y + row * (enemy_height + enemy_padding),
                 alive=true
@@ -96,7 +98,7 @@ fun init_game() {
 fun all_enemies_dead(): bool {
     for (var col = 0; col < enemy_cols; col++) {
         for (var row = 0; row < enemy_rows; row++) {
-            if (enemies[row][col].alive) {
+            if (enemies[col][row].alive) {
                 return false;
             }
         }
@@ -157,7 +159,7 @@ fun update() {
             // Check for enemy hits
             for (var col = 0; col < enemy_cols; col++) {
                 for (var row = 0; row < enemy_rows; row++) {
-                    var enemy = enemies[row][col];
+                    var enemy = enemies[col][row];
                     if (enemy.alive and len(projectiles) > i and
                         check_collision(
                             int(projectiles[i].x), int(projectiles[i].y), 
@@ -166,7 +168,7 @@ fun update() {
                             int(enemy_width), int(enemy_height))) {
                         
                         // Mark enemy as dead
-                        enemies[row][col].alive = false;
+                        enemies[col][row].alive = false;
                         // Remove projectile
                         projectiles = flx::remove_at(projectiles, i);
                         // Increase score
@@ -187,11 +189,11 @@ fun update() {
             // Check if any enemy has reached screen edge
             for (var col = 0; col < enemy_cols; col++) {
                 for (var row = 0; row < enemy_rows; row++) {
-                    if (enemies[row][col].alive) {
+                    if (enemies[col][row].alive) {
                         if ((enemy_direction > 0 and 
-                             enemies[row][col].x + enemy_width >= flx::get_current_width(game_window)) or
+                             enemies[col][row].x + enemy_width >= flx::get_current_width(game_window)) or
                             (enemy_direction < 0 and 
-                             enemies[row][col].x <= 0)) {
+                             enemies[col][row].x <= 0)) {
                             should_move_down = true;
                             row = enemy_rows;
                             break;
@@ -203,11 +205,11 @@ fun update() {
             // Move enemies
             for (var col = 0; col < enemy_cols; col++) {
                 for (var row = 0; row < enemy_rows; row++) {
-                    if (enemies[row][col].alive) {
+                    if (enemies[col][row].alive) {
                         if (should_move_down) {
-                            enemies[row][col].y += enemy_height;
+                            enemies[col][row].y += enemy_height;
                             // Check if enemy reached player
-                            if (enemies[row][col].y + enemy_height >= player_y) {
+                            if (enemies[col][row].y + enemy_height >= player_y) {
                                 lives--;
                                 if (lives <= 0) {
                                     state = ST_GAME_OVER;
@@ -217,7 +219,7 @@ fun update() {
                                 return;
                             }
                         } else {
-                            enemies[row][col].x += enemy_speed * enemy_direction;
+                            enemies[col][row].x += enemy_speed * enemy_direction;
                         }
                     }
                 }
@@ -280,7 +282,7 @@ fun render() {
         // Draw enemies
         for (var col = 0; col < enemy_cols; col++) {
             for (var row = 0; row < enemy_rows; row++) {
-                if (enemies[row][col].alive) {
+                if (enemies[col][row].alive) {
                     var enemy_color = color_red;
 
                     switch (row) {
@@ -290,8 +292,8 @@ fun render() {
                     }
                     
                     flx::fill_rect(game_window, 
-                                  int(enemies[row][col].x), 
-                                  int(enemies[row][col].y), 
+                                  int(enemies[col][row].x), 
+                                  int(enemies[col][row].y), 
                                   enemy_width, 
                                   enemy_height, 
                                   enemy_color);
