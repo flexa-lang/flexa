@@ -16,19 +16,27 @@ using namespace utils;
 
 bool utils::_kbhit() {
     termios oldt, newt;
+    int oldf;
+    int n;
+    
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
 
-    timeval tv = {0, 0};
-    fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(STDIN_FILENO, &fds);
-    int ret = select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
+    n = getchar();
 
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    return ret > 0;
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+    if (n != EOF) {
+        ungetc(n, stdin);
+        return true;
+    }
+
+    return false;
 }
 
 char utils::_getch() {
