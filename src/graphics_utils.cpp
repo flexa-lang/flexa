@@ -85,4 +85,29 @@ bool Window::is_quit() {
 	return quit;
 }
 
+bool Window::is_key_down(int) const {
+	throw std::runtime_error("Not implemented yet");
+	return false;
+}
+
+bool Window::is_mouse_down(int) const {
+	throw std::runtime_error("Not implemented yet");
+	return false;
+}
+
+int Window::mouse_x() const {
+	throw std::runtime_error("Not implemented yet");
+	return 0;
+}
+
+int Window::mouse_y() const {
+	throw std::runtime_error("Not implemented yet");
+	return 0;
+}
+
+int Window::mouse_wheel() const {
+	throw std::runtime_error("Not implemented yet");
+	return 0;
+}
+
 #endif // !defined(_WIN32)

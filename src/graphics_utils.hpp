@@ -56,6 +56,12 @@ namespace core {
 			virtual void update();
 			virtual bool is_quit();
 
+			bool is_key_down(int vk) const;
+			bool is_mouse_down(int button) const;
+			int mouse_x() const;
+			int mouse_y() const;
+			int mouse_wheel() const;
+
 		};
 
 	}
