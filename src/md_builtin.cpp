@@ -4,7 +4,6 @@
 #include <thread>
 #if defined(_WIN32)
 #include <conio.h>
-#include <sys/wait.h>
 #endif // defined(_WIN32)
 
 #include "types.hpp"
