@@ -1,5 +1,5 @@
 # The Flexa Interpreter
-Flexa is a toy programming language developed for fun.
+Flexa is a toy programming language developed for fun. So, do not take the Flexa versioning so seriously.
 
 ## Features
 - Easy Syntax
